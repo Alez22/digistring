@@ -142,7 +142,7 @@ All addresses are for Digitakt Mk1 OS 1.53 only.
 
 ## Credits and license
 
-STRING is MIT licensed. DECAY's T60 curve, TONE's note-tracking cutoff
+STRING is [MIT licensed](LICENSE). DECAY's T60 curve, TONE's note-tracking cutoff
 and the slower loop for very low notes follow the String model of
 [Mutable Instruments Rings](https://github.com/pichenettes/eurorack/tree/master/rings)
 by Emilie Gillet (MIT), rewritten in fixed point. The Digitakt RAM addresses, the pitch lookup and
