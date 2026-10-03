@@ -14,6 +14,10 @@
 
 static int32_t buf_a[N], buf_b[N];
 
+/* digihealth's FAST AUDIO flag, weak in karplus.c: defined here so a test
+ * can run the .fast copy of the sample loop too. */
+volatile uint32_t r_on;
+
 /** Render `n` samples in Digitakt blocks; AMP held, or released if !held. */
 static void render(struct ks_voice *v, const struct ks_params *p, int trigger,
                    int held, int32_t *out, unsigned n)
@@ -247,6 +251,36 @@ static void test_tone_keeps_decay(void)
     assert(t60 > 0.4 * expect && t60 < 1.05 * expect);
 }
 
+/* The .fast copy of the sample loop is the same source as the normal one:
+ * both must give the same samples, across a pluck, a very low note (the
+ * slow loop), a retrigger, and a release that fades and sleeps. */
+static void render_scenario(int32_t *out)
+{
+    struct ks_voice v;
+    struct ks_params high = params_for(330.0), low = params_for(12.0);
+    ks_voice_init(&v);
+    render(&v, &high, 1, 1, out, 9600);
+    render(&v, &low, 1, 1, out + 9600, 9600);
+    render(&v, &high, 1, 1, out + 19200, 9600);
+    render(&v, &high, 0, 0, out + 28800, 9600);
+    assert(v.sleeping);
+}
+
+static void test_fast_copy_matches(void)
+{
+#ifndef KS_FAST
+    puts("fast copy: not built (normal build)");
+    return;
+#endif
+    r_on = 0;
+    render_scenario(buf_a);
+    r_on = 1;
+    render_scenario(buf_b);
+    r_on = 0;
+    assert(!memcmp(buf_a, buf_b, 38400 * sizeof buf_a[0]));
+    puts("fast copy: identical output");
+}
+
 static void test_deterministic_and_bounded(void)
 {
     struct ks_voice va, vb;
@@ -396,6 +430,7 @@ int main(void)
     test_decayed_string_sleeps_while_held();
     test_bow_sustains_until_release();
     test_retrigger_adds_to_ringing_string();
+    test_fast_copy_matches();
     puts("karplus: all tests passed");
     return 0;
 }

@@ -1,18 +1,18 @@
 {
-  "id": "digistring",
+  "id": "digistring-fast",
   "version": "0.7.0",
   "license": "MIT",
-  "title": "STRING",
+  "title": "STRING-fast",
   "category": "Synthesis",
   "author": "Alez22",
-  "description": "Karplus-Strong plucked string SRC machine with its own SRC page names and menu icon. Its audio enters the normal Digitakt AMP, filter, mixer and sends. Works alone or alongside digisophie.",
+  "description": "STRING with its per-sample loop also in on-chip SRAM: while digihealth's FAST AUDIO is on, STRING runs from there for more tracks; otherwise it runs as usual. Needs digihealth. Install either STRING or STRING-fast, not both.",
   "device": "digitakt-mk1",
   "os": "1.53",
   "sources": [
-    "glue.s",
-    "digitakt.c",
-    "karplus.c",
-    "ui.c"
+    "../../glue.s",
+    "../../digitakt.c",
+    "../../karplus.c",
+    "../../ui.c"
   ],
   "sites": [
     {
@@ -116,7 +116,8 @@
     }
   ],
   "requires": [
-    "core"
+    "core",
+    "digihealth"
   ],
   "resources": {
     "names": [
@@ -124,6 +125,12 @@
     ]
   },
   "conflicts": [
-    "digistring-fast"
+    "digistring"
+  ],
+  "cflags": [
+    "-DKS_FAST"
+  ],
+  "weak": [
+    "r_on"
   ]
 }

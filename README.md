@@ -9,7 +9,7 @@ regular AMP, filter, mixer and effects path, like any stock machine.
 [alez22.github.io/digistring](https://alez22.github.io/digistring/)
 
 Get the current `.elemod` and release notes from the
-[v0.6.1 release](https://github.com/Alez22/digistring/releases/tag/v0.6.1).
+[v0.7.0 release](https://github.com/Alez22/digistring/releases/tag/v0.7.0).
 
 It works on its own and alongside
 [Sophie for Digitakt](https://github.com/soejrd/digisophie): the two mods
@@ -66,13 +66,13 @@ give a sensible new sound.
 ## Install: no compiler required
 
 You need only the prebuilt
-[STRING mod](release/digistring-0.6.1.elemod),
+[STRING mod](release/digistring-0.7.0.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own stock Digitakt Mk1 OS 1.53 `.syx`. You do not need ColdFire tools,
 Python or a source checkout.
 
 1. In elekloader, select your stock OS with **Change stock firmware**.
-2. Choose **Install from file** and select `digistring-0.6.1.elemod`. Enable STRING;
+2. Choose **Install from file** and select `digistring-0.7.0.elemod`. Enable STRING;
    core 2.1 must be enabled with it. Sophie and digihealth can be enabled
    too.
 3. Set the four-character OS version, then choose **Build Firmware** and
@@ -82,6 +82,32 @@ Python or a source checkout.
 
 The `.elemod` holds only this project's code, not Elektron's firmware.
 Neither the stock nor the modified OS file belongs in this repository.
+
+## STRING-fast: more tracks with FAST AUDIO
+
+[STRING-fast](release/digistring-fast-0.7.0.elemod) is the same machine,
+same sound and controls, for people who also run **digihealth**. While
+digihealth's **FAST AUDIO** is on, STRING's per-sample loop runs from the
+Digitakt's fast on-chip memory; when it is off, STRING runs as usual.
+
+On one Digitakt, five STRING tracks played without crackles at about 95%
+DSP load with FAST AUDIO on, and went over 100% with it off.
+
+- Install **either** STRING **or** STRING-fast, not both: elekloader
+  refuses the pair.
+- STRING-fast needs digihealth (GPL, not part of this project). Two
+  builds exist:
+  - [digihealth 1.0.1 from Sophie's repository](https://github.com/soejrd/digisophie/blob/main/release/digihealth-1.0.1.elemod):
+    a diagnostic build where FAST AUDIO starts **off**; switch it on in
+    SETTINGS > FAST AUDIO.
+  - the original [irpina/digihealth](https://github.com/irpina/digihealth),
+    where FAST AUDIO switches itself on after boot.
+- FAST AUDIO copies OS code into on-chip memory the OS does not use;
+  digihealth checks the copies and falls back if anything overwrites
+  them. Treat it, like the rest, as use at your own risk.
+
+Install it as above, choosing `digistring-fast-0.7.0.elemod` and also
+enabling digihealth.
 
 ## Build from source (developers only)
 
@@ -107,15 +133,17 @@ STOCK=/path/to/Digitakt_OS1.53.syx
 python3 -m elekloader.sdk.build mods/core --stock $STOCK
 python3 -m elekloader.sdk.build /path/to/digistring --stock $STOCK
 python3 -m elekloader.lint --stock $STOCK \
-    mods/core/out/core-2.1.elemod /path/to/digistring/out/digistring-0.6.1.elemod
+    mods/core/out/core-2.1.elemod /path/to/digistring/out/digistring-0.7.0.elemod
 python3 -m elekloader.patch --stock $STOCK \
     --mod mods/core/out/core-2.1.elemod \
-    --mod /path/to/digistring/out/digistring-0.6.1.elemod \
+    --mod /path/to/digistring/out/digistring-0.7.0.elemod \
     --out Digitakt_OS1.53_STRING.syx --version K005
 ```
 
 Add `--mod` lines (and the same files to `lint`) for Sophie or digihealth
-to build them into the same firmware.
+to build them into the same firmware. STRING-fast is built from
+`variants/fast`, whose `mod.json` compiles the same sources with
+`-DKS_FAST`; it needs digihealth in the firmware.
 
 ## How it works
 
@@ -124,7 +152,9 @@ to build them into the same firmware.
 | `karplus.c` | Fixed-point Karplus-Strong engine at 48 kHz: delay line, fractional allpass tuning, note-tracking lowpass, stiffness allpasses, T60 decay, exciters, sleep |
 | `digitakt.c` | OS 1.53 adapter: reads pitch, controls, triggers and AMP state, renders each STRING track into its source buffer |
 | `ui.c` | SRC page names, value texts, knob scaling, EXC icons and LFO names |
+| `ks_loop.inc` | The per-sample loop; STRING-fast compiles it a second time into `.fast` |
 | `glue.s` | Machine descriptor, menu icon and the assembly stubs at the patch sites |
+| `variants/fast/` | STRING-fast's manifest: same sources, `-DKS_FAST`, needs digihealth |
 | `scripts/gen_tables.py` | Generates `ks_tables.inc` (allpass coefficients) |
 | `scripts/gen_icons.py` | Generates `ks_icons.inc` from ASCII-art icons |
 
@@ -133,8 +163,9 @@ to build them into the same firmware.
   track gets 32 samples per block.
 - **Memory:** each track's delay line is 4 KB, all statically allocated:
   about 33 KB of RAM in total.
-- **CPU:** the per-sample loop has no divides. CPU load has not been
-  measured; the optional digihealth mod shows it on the instrument.
+- **CPU:** the per-sample loop has no divides. digihealth's DSP readout
+  shows the load on the instrument; see STRING-fast above for a
+  measurement.
 - **Coexistence with Sophie:** Sophie hooks the entry of several stock UI
   routines and returns to the stock code for other machines. STRING hooks
   a later instruction in the same routines, or redirects their callers,

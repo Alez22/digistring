@@ -30,6 +30,11 @@
 
 #include "ks_tables.inc"
 
+/* The per-sample path lives in ks_loop.inc. The STRING-fast build compiles
+ * it a second time into .fast, which FAST AUDIO copies to on-chip SRAM; its
+ * helpers are forced inline so the SRAM copy never calls back out. */
+#define KS_HOT static inline __attribute__((always_inline))
+
 /** Per-block loop coefficients, derived from the controls and the pitch. */
 struct ks_loop {
     uint32_t taps;  /* integer delay-line length */
@@ -41,14 +46,14 @@ struct ks_loop {
     int32_t rate;   /* loop steps per output sample, Q15 */
 };
 
-static int32_t ks_clamp(int32_t x, int32_t lo, int32_t hi)
+KS_HOT int32_t ks_clamp(int32_t x, int32_t lo, int32_t hi)
 { return x < lo ? lo : (x > hi ? hi : x); }
 
 /** Exact 0..127 to 0..32767 without a divide: 32767 = 127*258 + 1. */
 static int32_t ks_u7_q15(uint8_t x)
 { return ((int32_t)x << 8) + ((int32_t)x << 1) + (x == 127); }
 
-static uint32_t ks_rand(uint32_t *state)
+KS_HOT uint32_t ks_rand(uint32_t *state)
 {
     uint32_t x = *state;
     x ^= x << 13; x ^= x >> 17; x ^= x << 5;
@@ -63,7 +68,7 @@ static uint32_t ks_rand(uint32_t *state)
  * Inputs stay within int16 plus allpass overshoot, so c*(x - y1) fits in
  * 32 bits for |c| <= 0.45.
  */
-static int32_t ks_allpass(int32_t *x1, int32_t *y1, int32_t x, int32_t c)
+KS_HOT int32_t ks_allpass(int32_t *x1, int32_t *y1, int32_t x, int32_t c)
 {
     int32_t y = ((c * (x - *y1)) >> 15) + *x1;
     *x1 = x;
@@ -266,7 +271,7 @@ static void ks_voice_trigger(struct ks_voice *v, const struct ks_params *p,
 }
 
 /** One triangle cycle over `inc` steps per sample, +/-16384, zero mean. */
-static int32_t ks_triangle(uint32_t n, uint32_t inc)
+KS_HOT int32_t ks_triangle(uint32_t n, uint32_t inc)
 {
     uint32_t phase = (n * inc) & 0xffffu;
     int32_t up = (int32_t)(phase < 32768u ? phase : 65535u - phase);
@@ -278,7 +283,7 @@ static int32_t ks_triangle(uint32_t n, uint32_t inc)
  * @param rng the noise state for this read: the comb tap has its own copy
  *            of the sequence, so it hears exactly the delayed source.
  */
-static int32_t ks_source(const struct ks_voice *v, uint32_t n, uint32_t *rng)
+KS_HOT int32_t ks_source(const struct ks_voice *v, uint32_t n, uint32_t *rng)
 {
     switch (v->exciter) {
     case KS_EXC_PLUCK:
@@ -293,14 +298,14 @@ static int32_t ks_source(const struct ks_voice *v, uint32_t n, uint32_t *rng)
     }
 }
 
-static int ks_exciting(const struct ks_voice *v)
+KS_HOT int ks_exciting(const struct ks_voice *v)
 {
     if (v->exciter == KS_EXC_BOW) return v->held;
     return v->exc_n < v->exc_len;
 }
 
 /** Next excitation sample: source, POS comb, BRIGHT lowpass, velocity. */
-static int32_t ks_excitation(struct ks_voice *v, uint8_t bright)
+KS_HOT int32_t ks_excitation(struct ks_voice *v, uint8_t bright)
 {
     int32_t source;
     int32_t k = 1024 + (int32_t)bright * 243; /* keeps (e - lp)*k in 32 bits */
@@ -323,7 +328,7 @@ static int32_t ks_excitation(struct ks_voice *v, uint8_t bright)
  * the string decays as asked, down to zero.
  * |y| <= 2^15 and gain < 2^16, so y * gain + rest fits 32 bits.
  */
-static int32_t ks_apply_gain(struct ks_voice *v, int32_t y, int32_t gain)
+KS_HOT int32_t ks_apply_gain(struct ks_voice *v, int32_t y, int32_t gain)
 {
     int32_t scaled = y * gain + v->gain_rest;
     v->gain_rest = (int32_t)((uint32_t)scaled & 0xffffu);
@@ -331,7 +336,7 @@ static int32_t ks_apply_gain(struct ks_voice *v, int32_t y, int32_t gain)
 }
 
 /** One trip of the string loop; returns the sample written to the line. */
-static int32_t ks_loop_step(struct ks_voice *v, const struct ks_loop *loop,
+KS_HOT int32_t ks_loop_step(struct ks_voice *v, const struct ks_loop *loop,
                             int32_t excitation, int replacing)
 {
     int32_t y = replacing ? 0 : v->line[(v->write - loop->taps) & KS_LINE_MASK];
@@ -424,7 +429,7 @@ static void ks_zero(int32_t *out, uint32_t n)
  * @brief One loop step: excitation, string, peak and the replace window.
  * @return the new loop sample.
  */
-static int32_t ks_step(struct ks_voice *v, const struct ks_loop *loop,
+KS_HOT int32_t ks_step(struct ks_voice *v, const struct ks_loop *loop,
                        uint8_t bright, int32_t *peak)
 {
     int replacing = v->replace_left != 0;
@@ -436,11 +441,42 @@ static int32_t ks_step(struct ks_voice *v, const struct ks_loop *loop,
     return y;
 }
 
+#define KS_LOOP_NAME ks_render_samples
+#define KS_LOOP_SECTION ".text"
+#include "ks_loop.inc"
+#undef KS_LOOP_NAME
+#undef KS_LOOP_SECTION
+#ifdef KS_FAST
+/* The STRING-fast build (variants/fast) adds a second copy of the sample
+ * loop in .fast, which digihealth's FAST AUDIO copies to on-chip SRAM. A
+ * .fast section needs digihealth installed, so the normal build leaves it
+ * out entirely. */
+#define KS_LOOP_NAME ks_render_samples_fast
+#define KS_LOOP_SECTION ".fast"
+#include "ks_loop.inc"
+#undef KS_LOOP_NAME
+#undef KS_LOOP_SECTION
+
+/* digihealth's FAST AUDIO flag: 1 once its SRAM copies, ours included,
+ * are made, checked and in use; 0 when switched off or when its watchdog
+ * finds them overwritten. Weak: without digihealth it reads as absent. */
+extern volatile uint32_t r_on __attribute__((weak));
+
+/** True when the .fast copy of the sample loop is in SRAM and valid. */
+static int ks_fast_ready(void)
+{
+    return &r_on != 0 && r_on != 0;
+}
+#else
+static int ks_fast_ready(void) { return 0; }
+#define ks_render_samples_fast ks_render_samples
+#endif
+
 void ks_voice_render(struct ks_voice *v, const struct ks_params *p,
                      int trigger, int32_t *out, uint32_t n)
 {
     struct ks_loop loop;
-    uint32_t i;
+    uint32_t done;
     int32_t peak = 0;
     ks_loop_setup(&loop, p);
     if (trigger) ks_voice_trigger(v, p, &loop);
@@ -448,31 +484,13 @@ void ks_voice_render(struct ks_voice *v, const struct ks_params *p,
         ks_zero(out, n);
         return;
     }
-    for (i = 0; i < n; ++i) {
-        int32_t y;
-        /* At full rate this steps every sample and outputs src_cur exactly;
-         * slower, it steps when the phase wraps and interpolates. */
-        v->src_phase += loop.rate;
-        if (v->src_phase > KS_RATE_FULL) {
-            v->src_phase -= KS_RATE_FULL;
-            v->src_prev = v->src_cur;
-            v->src_cur = ks_step(v, &loop, p->bright, &peak);
-        }
-        /* |cur - prev| <= 65535 and phase <= 2^15: fits 32 bits. */
-        y = v->src_prev
-            + (((v->src_cur - v->src_prev) * v->src_phase) >> 15);
-        /* A full-scale string reaches 0.25 FS, Sophie's source level. */
-        y >>= 2;
-        if (v->fade_left) {
-            y = (y * v->fade_left) >> 7;
-            if (--v->fade_left == 0) {
-                v->sleeping = 1;
-                ks_zero(out + i + 1, n - i - 1);
-                out[i] = 0;
-                return;
-            }
-        }
-        out[i] = y * 65536;
+    done = ks_fast_ready()
+        ? ks_render_samples_fast(v, &loop, p->bright, out, n, &peak)
+        : ks_render_samples(v, &loop, p->bright, out, n, &peak);
+    if (done < n) {
+        /* The fade ended and the voice went to sleep mid-block. */
+        ks_zero(out + done, n - done);
+        return;
     }
     ks_track_silence(v, peak);
 }
