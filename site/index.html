@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STRING for Digitakt</title>
+<meta name="description" content="STRING: a Karplus-Strong plucked string machine for the original Digitakt (Mk1), installed with elekloader.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 7' shape-rendering='crispEdges' fill='%23b8f34a'%3E%3Crect x='3' y='1' width='5' height='1'/%3E%3Crect x='1' y='2' width='2' height='1'/%3E%3Crect x='8' y='2' width='2' height='1'/%3E%3Crect x='0' y='3' width='1' height='1'/%3E%3Crect x='10' y='3' width='1' height='1'/%3E%3Crect x='1' y='4' width='2' height='1'/%3E%3Crect x='8' y='4' width='2' height='1'/%3E%3Crect x='3' y='5' width='5' height='1'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="logo"><svg class="px" viewBox="0 0 11 7" role="img" aria-label="menu" shape-rendering="crispEdges"><rect x="3" y="1" width="5" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="8" y="2" width="2" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="1" y="4" width="2" height="1"/><rect x="8" y="4" width="2" height="1"/><rect x="3" y="5" width="5" height="1"/></svg></div>
+    <h1>STRING</h1>
+    <p class="tagline">A Karplus-Strong plucked string machine for the original Digitakt.</p>
+    <p class="sub">A new SRC machine for Digitakt Mk1, OS&nbsp;1.53. Its sound goes through the
+      Digitakt's own AMP, filter, mixer and effects, like any stock machine.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/Alez22/digistring/releases/tag/v0.6.0">Download v0.6.0</a>
+      <a class="btn" href="https://github.com/Alez22/digistring">Source on GitHub</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>Listen</h2>
+    <p>Four tracks, all STRING.</p>
+    <audio controls preload="metadata" src="media/demo.flac">
+      Your browser cannot play this audio.
+      <a href="media/demo.flac">Download the demo</a>.
+    </audio>
+  </section>
+
+  <section>
+    <h2>On the Digitakt</h2>
+    <figure class="screen">
+      <img src="media/screen.jpg" alt="The Digitakt's screen showing STRING's SRC page" loading="lazy">
+    </figure>
+  </section>
+
+  <section>
+    <h2>Controls</h2>
+    <p>STRING borrows SLICE's eight parameter slots, so every control is saved
+      with the sound, can be p-locked and reached by MIDI CC.</p>
+    <div class="exc">
+      <div><span class="icon"><svg class="px" viewBox="0 0 15 15" role="img" aria-label="bow" shape-rendering="crispEdges"><rect x="7" y="0" width="1" height="1"/><rect x="7" y="1" width="1" height="1"/><rect x="7" y="2" width="1" height="1"/><rect x="2" y="3" width="3" height="1"/><rect x="7" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="5" y="4" width="3" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="7" y="5" width="4" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="7" y="6" width="1" height="1"/><rect x="11" y="6" width="2" height="1"/><rect x="0" y="7" width="14" height="1"/><rect x="7" y="8" width="1" height="1"/><rect x="7" y="9" width="1" height="1"/><rect x="7" y="10" width="1" height="1"/><rect x="7" y="11" width="1" height="1"/><rect x="7" y="12" width="1" height="1"/><rect x="7" y="13" width="1" height="1"/><rect x="7" y="14" width="1" height="1"/></svg></span><span>BOW</span></div>
+      <div><span class="icon"><svg class="px" viewBox="0 0 15 15" role="img" aria-label="hit" shape-rendering="crispEdges"><rect x="2" y="1" width="5" height="1"/><rect x="1" y="2" width="7" height="1"/><rect x="1" y="3" width="7" height="1"/><rect x="2" y="4" width="5" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="7" y="8" width="1" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="0" y="11" width="15" height="1"/></svg></span><span>HIT</span></div>
+      <div><span class="icon"><svg class="px" viewBox="0 0 15 15" role="img" aria-label="noise" shape-rendering="crispEdges"><rect x="3" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="11" y="3" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="11" y="5" width="2" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="11" y="6" width="1" height="1"/><rect x="13" y="6" width="1" height="1"/><rect x="0" y="7" width="1" height="1"/><rect x="2" y="7" width="2" height="1"/><rect x="5" y="7" width="2" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="10" y="7" width="2" height="1"/><rect x="13" y="7" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="7" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="14" y="8" width="1" height="1"/><rect x="4" y="9" width="1" height="1"/><rect x="7" y="9" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="11" y="9" width="1" height="1"/><rect x="4" y="10" width="1" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/></svg></span><span>NOISE</span></div>
+      <div><span class="icon"><svg class="px" viewBox="0 0 15 15" role="img" aria-label="pluck" shape-rendering="crispEdges"><rect x="6" y="2" width="3" height="1"/><rect x="7" y="3" width="1" height="1"/><rect x="7" y="4" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="8" y="5" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="9" y="6" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="3" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="2" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="1" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="0" y="11" width="1" height="1"/><rect x="14" y="11" width="1" height="1"/></svg></span><span>PLUCK</span></div>
+    </div>
+    <p class="caption">EXC is drawn as one of four icons instead of a knob.</p>
+    <table>
+      <thead><tr><th>Knob</th><th>Control</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>A</td><td>TUNE</td><td>Pitch. An untransposed note plays C4.</td></tr>
+        <tr><td>B</td><td>EXC</td><td>Exciter: bow, mallet hit, noise burst or pluck</td></tr>
+        <tr><td>C</td><td>STIFF</td><td>From an ideal string to a bell-like, inharmonic tone</td></tr>
+        <tr><td>E</td><td>POS</td><td>Pluck position, from the bridge to the middle</td></tr>
+        <tr><td>F</td><td>SOFT</td><td>Darker, softer attack</td></tr>
+        <tr><td>G</td><td>TONE</td><td>Damping inside the string: warm to open and metallic</td></tr>
+        <tr><td>H</td><td>DECAY</td><td>How long the string rings: 0.07&nbsp;s to about 17&nbsp;s, endless at the top</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Under the hood</h2>
+    <ul class="features">
+      <li><strong>Karplus-Strong at 48&nbsp;kHz</strong> in fixed point, in tune to within a
+        cent from G1 up.</li>
+      <li><strong>DECAY is a time.</strong> The same setting rings as long on a low note as on
+        a high one.</li>
+      <li><strong>TONE follows the note</strong>, so a setting sounds alike from bass to treble.</li>
+      <li><strong>No octave jumps on low notes</strong>: below F#0 the string slows down
+        instead, down to about 1.5&nbsp;Hz.</li>
+      <li>Decay, tone and the low-note design follow the String model of
+        <a href="https://github.com/pichenettes/eurorack/tree/master/rings">Mutable Instruments Rings</a>.</li>
+      <li><strong>Works alongside <a href="https://github.com/soejrd/digisophie">Sophie</a></strong>,
+        or on its own.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Install</h2>
+    <p>No compiler needed. You need
+      <a href="https://github.com/irpina/elekloader/releases/latest">elekloader</a>,
+      your own stock Digitakt Mk1 OS&nbsp;1.53 file and the STRING mod.</p>
+    <ol class="steps">
+      <li>Download <code>digistring-0.6.0.elemod</code> from the
+        <a href="https://github.com/Alez22/digistring/releases/tag/v0.6.0">release</a>.</li>
+      <li>In elekloader, select your stock OS with <em>Change stock firmware</em>.</li>
+      <li><em>Install from file</em>, enable STRING (and core 2.1), then <em>Build Firmware</em>.</li>
+      <li>Send the generated <code>.syx</code> to the Digitakt with Elektron Transfer.</li>
+    </ol>
+    <p class="warning"><strong>Use at your own risk.</strong> This modifies your instrument's
+      firmware. Back up your projects and sounds, and keep a stock OS file for recovery.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>STRING is MIT licensed, by Alez22. It is independent of, and not endorsed by,
+      Elektron, and contains no Elektron firmware or samples.</p>
+    <p>Thanks to <a href="https://github.com/soejrd/digisophie">digisophie</a>,
+      <a href="https://github.com/irpina/elekloader">elekloader</a> and
+      <a href="https://github.com/pichenettes/eurorack/tree/master/rings">Rings</a>.</p>
+  </div>
+</footer>
+
+</body>
+</html>

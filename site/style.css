@@ -1,0 +1,187 @@
+/* STRING landing page: one dark page with the Digitakt screen's green. */
+:root {
+  --bg: #0d0f0c;
+  --panel: #151913;
+  --line: #262d22;
+  --text: #d9e0d4;
+  --muted: #8d9886;
+  --lcd: #b8f34a;
+  --lcd-dim: #6f9a2a;
+  --warn: #f3c74a;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 var(--sans);
+}
+
+a { color: var(--lcd); text-underline-offset: 3px; }
+a:hover { color: #d4ff7a; }
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ---- hero ---- */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(184, 243, 74, 0.10), transparent 60%),
+    var(--bg);
+  text-align: center;
+}
+
+.logo .px {
+  width: 132px;
+  height: auto;
+  fill: var(--lcd);
+  filter: drop-shadow(0 0 10px rgba(184, 243, 74, 0.45));
+}
+
+h1 {
+  margin: 20px 0 8px;
+  font: 700 clamp(48px, 12vw, 88px)/1 var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--lcd);
+  text-shadow: 0 0 18px rgba(184, 243, 74, 0.35);
+}
+
+.tagline {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.sub {
+  margin: 0 auto 28px;
+  max-width: 560px;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-block;
+  padding: 11px 20px;
+  border: 1px solid var(--lcd-dim);
+  border-radius: 6px;
+  color: var(--lcd);
+  font: 600 0.95rem var(--mono);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.btn:hover { border-color: var(--lcd); }
+.btn.primary { background: var(--lcd); color: #10140c; border-color: var(--lcd); }
+.btn.primary:hover { background: #d4ff7a; color: #10140c; }
+
+/* ---- sections ---- */
+section { padding: 48px 0 8px; }
+
+h2 {
+  margin: 0 0 14px;
+  font: 700 0.95rem var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lcd);
+}
+
+audio { width: 100%; margin-top: 4px; }
+
+.screen { margin: 0; }
+.screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* EXC icons, as on the Digitakt's screen */
+.exc {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 20px 0 6px;
+}
+.exc > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 600 0.85rem var(--mono);
+  color: var(--lcd);
+}
+.exc .px { width: 60px; height: 60px; fill: var(--lcd); }
+.caption { margin: 0 0 20px; color: var(--muted); font-size: 0.9rem; text-align: center; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+th, td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th { color: var(--muted); font-weight: 600; }
+td:nth-child(1), td:nth-child(2) {
+  font-family: var(--mono);
+  color: var(--lcd);
+  white-space: nowrap;
+}
+
+.features, .steps { padding-left: 1.2em; }
+.features li, .steps li { margin: 8px 0; }
+
+code {
+  font: 0.9em var(--mono);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.warning {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--warn);
+  background: rgba(243, 199, 74, 0.07);
+  color: var(--text);
+}
+
+footer {
+  margin-top: 56px;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .hero { padding: 52px 0 40px; }
+  .exc { grid-template-columns: repeat(2, 1fr); }
+  td:nth-child(3) { min-width: 140px; }
+}
