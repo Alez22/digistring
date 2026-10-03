@@ -239,6 +239,16 @@ void ks_voice_init(struct ks_voice *v)
     v->quiet_blocks = v->silent_blocks = v->fade_left = 0;
 }
 
+/**
+ * @brief Silence a voice without clearing its 2 KB line.
+ * Cheap enough for the audio interrupt: the next trigger sees an inactive
+ * voice and ignores the stale line for one trip round the loop.
+ */
+void ks_voice_stop(struct ks_voice *v)
+{
+    v->active = 0;
+}
+
 /* Stock AMP owns note-off and duration, exactly as in Sophie. Its level
  * passes through zero at the start of an envelope, so only phase zero (the
  * released/idle state) with a low level counts as quiet. Unlike Sophie, a

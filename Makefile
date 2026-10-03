@@ -12,7 +12,9 @@ test: out/test_karplus
 	./out/test_karplus
 cross-check: | out
 	mkdir -p out/cross
+	$(CROSS)as -mcpu=54455 -o out/cross/glue.o glue.s
+	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c digitakt.c -o out/cross/digitakt.o
 	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c karplus.c -o out/cross/karplus.o
-	$(CROSS)size out/cross/karplus.o
+	$(CROSS)size out/cross/glue.o out/cross/digitakt.o out/cross/karplus.o
 clean:
 	rm -rf out

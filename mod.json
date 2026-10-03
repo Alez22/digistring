@@ -1,0 +1,20 @@
+{
+  "id": "digistring",
+  "version": "0.1.0",
+  "license": "MIT",
+  "title": "STRING",
+  "category": "Synthesis",
+  "author": "digistring contributors",
+  "description": "Karplus-Strong plucked string SRC machine. Its audio enters the normal Digitakt AMP, filter, mixer and sends. Until it has its own SRC page it shows SLICE's knob names.",
+  "device": "digitakt-mk1",
+  "os": "1.53",
+  "sources": ["glue.s", "digitakt.c", "karplus.c"],
+  "sites": [
+    {"addr": "0x40077fc2", "stock": "487980001a18", "op": "jmp", "target": "ks_inject_s"}
+  ],
+  "contribute": [
+    {"to": "core_machines", "order": 80, "data": "00000000", "relocs": [[0, "abs32", "sym:ks_machine", 0]]}
+  ],
+  "requires": ["core"],
+  "resources": {"names": ["machine:8"]}
+}

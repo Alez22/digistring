@@ -60,6 +60,7 @@ struct ks_voice {
 };
 
 void ks_voice_init(struct ks_voice *voice);
+void ks_voice_stop(struct ks_voice *voice);
 void ks_voice_gate(struct ks_voice *voice, int32_t amp_level,
                    int32_t amp_phase);
 void ks_voice_render(struct ks_voice *voice, const struct ks_params *params,
