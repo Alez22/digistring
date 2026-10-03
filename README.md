@@ -57,14 +57,16 @@ give a sensible new sound.
   1760 Hz).
 - **LFO** destinations show STRING's names, grouped as `STRG`.
 
-## Install
+## Install: no compiler required
 
-You need [elekloader](https://github.com/irpina/elekloader), your own stock
-Digitakt Mk1 OS 1.53 `.syx`, and a `digistring-<version>.elemod` built as
-described below.
+You need only the prebuilt
+[STRING mod](release/digistring-0.6.0.elemod),
+[elekloader](https://github.com/irpina/elekloader/releases/latest), and your
+own stock Digitakt Mk1 OS 1.53 `.syx`. You do not need ColdFire tools,
+Python or a source checkout.
 
 1. In elekloader, select your stock OS with **Change stock firmware**.
-2. Choose **Install from file** and select the `.elemod`. Enable STRING;
+2. Choose **Install from file** and select `digistring-0.6.0.elemod`. Enable STRING;
    core 2.1 must be enabled with it. Sophie and digihealth can be enabled
    too.
 3. Set the four-character OS version, then choose **Build Firmware** and
@@ -75,7 +77,7 @@ described below.
 The `.elemod` holds only this project's code, not Elektron's firmware.
 Neither the stock nor the modified OS file belongs in this repository.
 
-## Build from source
+## Build from source (developers only)
 
 You need Python 3.9+, a source checkout of elekloader, the ColdFire cross
 toolchain and your stock OS 1.53 file. On Debian or Ubuntu:
