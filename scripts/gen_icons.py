@@ -3,8 +3,9 @@
 """Convert ASCII icons into the firmware's Bitmap pixel format.
 
 The Digitakt's blit (0x400c2960) reads bitmaps by column: one 32-bit long
-per column, the top row in bit 31. A mask in the same layout selects the
-pixels written. Run it again after editing an icon:
+per column, bit 31 first. Bitmap y grows upwards (y = 0 is the bottom of
+the screen), so bit 31 is the icon's bottom row and the ASCII art's top row
+goes last. A mask in the same layout selects the pixels written. Run it again after editing an icon:
     python3 scripts/gen_icons.py > ks_icons.inc
 '#' is a lit pixel, '.' an unlit one; the mask covers the whole icon so it
 replaces what was under it.
@@ -92,7 +93,7 @@ def columns(rows):
         v = 0
         for y in range(H):
             if rows[y][x] == '#':
-                v |= 1 << (31 - y)
+                v |= 1 << (31 - (H - 1 - y))  # bottom row in bit 31
         out.append(v)
     return out
 

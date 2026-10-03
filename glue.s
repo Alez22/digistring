@@ -29,8 +29,10 @@ ks_short: .asciz "STRG"
 
 | Menu icon, in the firmware's Bitmap format as its blit (0x400c2960)
 | reads it: vtable, width, height, longs per column, pixels, mask, 0.
-| Pixels are stored by column, the top row in bit 31; the mask selects
-| the pixels written. Drawn: a vibrating string between two end points.
+| Pixels are stored by column, bit 31 first; bitmap y grows upwards, so
+| bit 31 is the bottom row (this icon is symmetric, so it reads the same).
+| The mask selects the pixels written. Drawn: a vibrating string between
+| two end points.
 |   ...........
 |   ...#####...
 |   .##.....##.

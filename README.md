@@ -9,7 +9,7 @@ regular AMP, filter, mixer and effects path, like any stock machine.
 [alez22.github.io/digistring](https://alez22.github.io/digistring/)
 
 Get the current `.elemod` and release notes from the
-[v0.6.0 release](https://github.com/Alez22/digistring/releases/tag/v0.6.0).
+[v0.6.1 release](https://github.com/Alez22/digistring/releases/tag/v0.6.1).
 
 It works on its own and alongside
 [Sophie for Digitakt](https://github.com/soejrd/digisophie): the two mods
@@ -66,13 +66,13 @@ give a sensible new sound.
 ## Install: no compiler required
 
 You need only the prebuilt
-[STRING mod](release/digistring-0.6.0.elemod),
+[STRING mod](release/digistring-0.6.1.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own stock Digitakt Mk1 OS 1.53 `.syx`. You do not need ColdFire tools,
 Python or a source checkout.
 
 1. In elekloader, select your stock OS with **Change stock firmware**.
-2. Choose **Install from file** and select `digistring-0.6.0.elemod`. Enable STRING;
+2. Choose **Install from file** and select `digistring-0.6.1.elemod`. Enable STRING;
    core 2.1 must be enabled with it. Sophie and digihealth can be enabled
    too.
 3. Set the four-character OS version, then choose **Build Firmware** and
@@ -107,10 +107,10 @@ STOCK=/path/to/Digitakt_OS1.53.syx
 python3 -m elekloader.sdk.build mods/core --stock $STOCK
 python3 -m elekloader.sdk.build /path/to/digistring --stock $STOCK
 python3 -m elekloader.lint --stock $STOCK \
-    mods/core/out/core-2.1.elemod /path/to/digistring/out/digistring-0.6.0.elemod
+    mods/core/out/core-2.1.elemod /path/to/digistring/out/digistring-0.6.1.elemod
 python3 -m elekloader.patch --stock $STOCK \
     --mod mods/core/out/core-2.1.elemod \
-    --mod /path/to/digistring/out/digistring-0.6.0.elemod \
+    --mod /path/to/digistring/out/digistring-0.6.1.elemod \
     --out Digitakt_OS1.53_STRING.syx --version K005
 ```
 

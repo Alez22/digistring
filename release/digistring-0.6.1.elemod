@@ -1,7 +1,7 @@
 {
  "elemod": 2,
  "id": "digistring",
- "version": "0.6.0",
+ "version": "0.6.1",
  "title": "STRING",
  "description": "Karplus-Strong plucked string SRC machine with its own SRC page names and menu icon. Its audio enters the normal Digitakt AMP, filter, mixer and sends. Works alone or alongside digisophie.",
  "category": "Synthesis",
@@ -610,27 +610,13 @@
     ],
     [
      "stock",
-     "0x401b899e",
+     "0x40190084",
      8
     ],
     [
      "stock",
-     "0x401ae10c",
+     "0x4020ea74",
      8
-    ],
-    [
-     "stock",
-     "0x402024ae",
-     8
-    ],
-    [
-     "hex",
-     "240000003800"
-    ],
-    [
-     "stock",
-     "0x40232c82",
-     10
     ],
     [
      "stock",
@@ -638,98 +624,97 @@
      8
     ],
     [
+     "hex",
+     "0048"
+    ],
+    [
      "stock",
-     "0x4020ea94",
+     "0x401b011c",
+     10
+    ],
+    [
+     "stock",
+     "0x4017cbc2",
      8
     ],
     [
      "stock",
-     "0x402173a4",
+     "0x4020ea1c",
      8
     ],
     [
      "stock",
-     "0x401aaade",
+     "0x4020ea2c",
+     8
+    ],
+    [
+     "stock",
+     "0x4021f238",
      8
     ],
     [
      "hex",
-     "3f00000000e0"
+     "0100000001f800000e00000001e0"
     ],
     [
      "stock",
-     "0x4021297e",
+     "0x40216a46",
      10
     ],
     [
      "hex",
-     "00c000000300000000e00000011000001fc0"
+     "0180"
     ],
     [
      "stock",
-     "0x4021f276",
+     "0x402214ba",
+     10
+    ],
+    [
+     "hex",
+     "07f0"
+    ],
+    [
+     "stock",
+     "0x40229cde",
      14
     ],
     [
      "hex",
-     "001000003010000078100000781000007c1000007a10000079100000309000000050"
+     "1000000010180000103c0000103c0000107c000010bc0000113c0000121800001400"
     ],
     [
      "stock",
-     "0x401911c4",
+     "0x4020ea2e",
      10
     ],
     [
      "stock",
-     "0x401911c6",
+     "0x4020ea30",
      8
     ],
     [
      "stock",
-     "0x401911c6",
+     "0x4020ea30",
      8
     ],
     [
      "hex",
-     "0700"
+     "01c00000012000000110000001100000011000000120000001200000fffe"
     ],
     [
      "stock",
-     "0x402298da",
-     10
-    ],
-    [
-     "stock",
-     "0x40217d64",
-     8
-    ],
-    [
-     "stock",
-     "0x402179b4",
-     8
+     "0x4024dbae",
+     14
     ],
     [
      "hex",
-     "fffe"
+     "018000000180"
     ],
     [
      "stock",
-     "0x4021c292",
+     "0x401a9f14",
      10
-    ],
-    [
-     "hex",
-     "0500"
-    ],
-    [
-     "stock",
-     "0x401ab3cc",
-     10
-    ],
-    [
-     "stock",
-     "0x401a9f16",
-     8
     ],
     [
      "hex",
@@ -1793,7 +1778,7 @@
  "conflicts": [],
  "build": {
   "sources": {
-   "glue.s": "33e2342063a586e0f27633ce11dd427c214878239be3885c6012a63e882dd051",
+   "glue.s": "70d078016cf826d9f264cc1114cda456d189b214355bdeb45e83f3fb03132220",
    "digitakt.c": "8113d7fa8c7a1bb6400aaa8767c083eaf04e709a0541c323949824123502a90d",
    "karplus.c": "b79797dd0e0c2ae6788723933a7fccae6f39b070ce7a4a57c0c1a509f42c6e6c",
    "ui.c": "f4264e593017a3b42bae1a99eb604ae11326a2d513d8a0b719115ce7df774f50"
