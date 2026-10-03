@@ -23,23 +23,24 @@
 #define PITCH_TAB ((const uint32_t *)(unsigned long)0x4019b1c0u)
 
 /* SRC slots A..H (byte offsets into VP). The machine borrows SLICE's
- * parameters (core descriptor `params` = 3), so until it has its own UI
- * the knobs show SLICE's names and ranges:
- *   A TUNE  stock       -> pitch
- *   B PLAY  0..3        -> EXC: NOISE / PLUCK / MALLET / BOW
- *   C BR    0..127      -> STIFF (default 0: an ideal string)
- *   D SAMP              -> unused, stock sample selector
- *   E SLICE 0..64       -> POS (default 0: comb off)
- *   F LEN   0..63       -> DECAY
- *   G GRID  0..4        -> DAMP in five steps
- *   H LEV   0..127      -> BRIGHT (default 100) */
+ * parameters (core descriptor `params` = 3), so it keeps SLICE's ranges and
+ * defaults; ui.c only renames and redraws them. Controls are placed so that
+ * SLICE's defaults give a sensible new sound:
+ *   A TUNE  stock              -> pitch
+ *   B EXC   0..3,   def 3      -> BOW / HIT / NOISE / PLUCK (default PLUCK)
+ *   C STIFF 0..127, def 0      -> dispersion (default: an ideal string)
+ *   D SAMP                     -> unused, stock sample selector
+ *   E POS   0..64,  def 0      -> pluck position comb (default: off)
+ *   F SOFT  0..63,  def 0      -> darker excitation (default: bright)
+ *   G TONE  0..4,   def 0      -> loop damping in five steps (0: classic)
+ *   H DECAY 0..127, def 100    -> loop gain */
 #define P_TUNE 0
 #define P_EXC 2
 #define P_STIFF 4
 #define P_POS 8
-#define P_DECAY 10
-#define P_DAMP 12
-#define P_BRIGHT 14
+#define P_SOFT 10
+#define P_TONE 12
+#define P_DECAY 14
 
 /* 8 x ~2.1 KB, zeroed by core at boot: every voice starts inactive. */
 static struct ks_voice ks_voices[TRACKS];
@@ -75,17 +76,22 @@ static uint32_t ks_period_q8(uint32_t ratio)
 
 static void ks_read_params(int32_t track, struct ks_params *p)
 {
-    static const uint8_t damp_steps[5] = { 0, 32, 64, 96, 127 };
-    uint32_t grid = ks_u7(track, P_DAMP);
+    /* EXC values in UI order, so SLICE's PLAY default (3) is PLUCK. */
+    static const uint8_t exciters[4] = {
+        KS_EXC_BOW, KS_EXC_MALLET, KS_EXC_NOISE, KS_EXC_PLUCK
+    };
+    /* TONE 0 is the classic two-tap average; higher steps ring brighter. */
+    static const uint8_t damp_steps[5] = { 127, 96, 64, 32, 0 };
+    uint32_t tone = ks_u7(track, P_TONE);
     uint32_t pos = ks_u7(track, P_POS) * 2u;
-    uint32_t decay = ks_u7(track, P_DECAY);
+    uint32_t soft = ks_u7(track, P_SOFT);
     p->period_q8 = ks_period_q8(ks_pitch_ratio(track));
-    p->exciter = (uint8_t)(ks_u7(track, P_EXC) & 3u);
+    p->exciter = exciters[ks_u7(track, P_EXC) & 3u];
     p->stiff = (uint8_t)ks_u7(track, P_STIFF);
     p->pos = (uint8_t)(pos > 127u ? 127u : pos);
-    p->decay = (uint8_t)(decay * 2u + (decay >= 63u)); /* 0..127 */
-    p->damp = damp_steps[grid > 4u ? 4u : grid];
-    p->bright = (uint8_t)ks_u7(track, P_BRIGHT);
+    p->bright = (uint8_t)(127u - (soft * 2u + (soft >= 63u)));
+    p->damp = damp_steps[tone > 4u ? 4u : tone];
+    p->decay = (uint8_t)ks_u7(track, P_DECAY);
     p->velocity = (uint8_t)(((uint32_t)(uint16_t)VEL(track) >> 8) & 0x7fu);
 }
 
