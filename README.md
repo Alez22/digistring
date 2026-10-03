@@ -93,7 +93,7 @@ Test and cross-compile from this repository:
 
 ```sh
 make test          # DSP and UI tests on the host
-make cross-check   # compile for the Digitakt's MCF54455
+make cross-check   # compile for the Digitakt's ColdFire (MCF54418; built with -mcpu=54455, same ISA)
 ```
 
 Build the mod, check it against your stock OS and write a firmware, from
