@@ -4,13 +4,18 @@
  *
  * The loop runs at the full 48 kHz output rate: it costs a handful of
  * multiplies per sample, and a lower internal rate would cost tuning and
- * range at the top of the keyboard.  The stock AMP, filter and effects
- * follow the source, as for any Digitakt machine.
+ * range at the top of the keyboard. Only notes too long for the delay line
+ * run it slower, with linear interpolation on the output. The stock AMP,
+ * filter and effects follow the source, as for any Digitakt machine.
+ *
+ * DECAY as a T60, TONE's cutoff tracking the note and the decay, and the
+ * slow loop for very low notes follow the String model of Mutable
+ * Instruments Rings (Emilie Gillet, MIT).
  *
  * One loop sample:
- *   read line[write - taps] -> DAMP two-tap lowpass -> two STIFF allpasses
+ *   read line[write - taps] -> TONE one-pole lowpass -> two STIFF allpasses
  *   -> fractional tuning allpass -> DECAY gain -> + excitation -> write
- * Total loop delay = taps + damp delay + stiffness delay + fraction, and it
+ * Total loop delay = taps + tone delay + stiffness delay + fraction, and it
  * equals the requested period at low frequency.
  */
 #include "karplus.h"
@@ -28,10 +33,12 @@
 /** Per-block loop coefficients, derived from the controls and the pitch. */
 struct ks_loop {
     uint32_t taps;  /* integer delay-line length */
-    int32_t damp;   /* DAMP mix of the previous sample, Q15, 0..0.5 */
+    int32_t tone;   /* TONE lowpass coefficient, Q15; 0 = no filter */
     int32_t stiff;  /* STIFF allpass coefficient, Q15, 0..-0.45 */
     int32_t frac;   /* fractional tuning allpass coefficient, Q15 */
-    int32_t gain;   /* DECAY loop gain, Q15, always below 1.0 */
+    int32_t gain;   /* DECAY loop gain, Q16, always below 1.0 */
+    uint32_t period_q8; /* loop period in loop steps, Q8 */
+    int32_t rate;   /* loop steps per output sample, Q15 */
 };
 
 static int32_t ks_clamp(int32_t x, int32_t lo, int32_t hi)
@@ -64,22 +71,120 @@ static int32_t ks_allpass(int32_t *x1, int32_t *y1, int32_t x, int32_t c)
     return y;
 }
 
-/**
- * @brief Fold a period into the delay line's range by whole octaves.
- * Notes below ~47 Hz play an octave (or more) higher instead of detuning.
- */
-uint32_t ks_fold_period_q8(uint32_t period_q8)
+/** The played period, kept between the shortest one and the 1.5 Hz floor. */
+static uint32_t ks_limit_period(uint32_t period_q8)
 {
-    while (period_q8 > KS_PERIOD_MAX_Q8) period_q8 >>= 1;
-    if (period_q8 < KS_PERIOD_MIN_Q8) period_q8 = KS_PERIOD_MIN_Q8;
+    if (period_q8 < KS_PERIOD_MIN_Q8) return KS_PERIOD_MIN_Q8;
+    if (period_q8 > KS_PERIOD_FLOOR_Q8) return KS_PERIOD_FLOOR_Q8;
     return period_q8;
 }
 
-/** DECAY 0..127 to a loop gain: quadratic so the top of the knob is fine. */
-static int32_t ks_decay_gain(uint8_t decay)
+/** 2^-e for e >= 0 in Q16, from a 65-point table; 0 below 2^-16. */
+static uint32_t ks_exp2_neg(uint32_t e_q16)
 {
-    int32_t rest = 127 - (int32_t)decay;
-    return Q15 - 1 - ((rest * rest) >> 2); /* 0.877 .. 0.99994 per pass */
+    uint32_t octaves = e_q16 >> 16;
+    uint32_t index = (e_q16 >> 10) & 63u;
+    uint32_t fraction = e_q16 & 1023u;
+    uint32_t value;
+    if (octaves >= 16) return 0;
+    value = ks_exp2_neg_q16[index]
+        - (((ks_exp2_neg_q16[index] - ks_exp2_neg_q16[index + 1]) * fraction)
+           >> 10);
+    return value >> octaves;
+}
+
+/**
+ * @brief Loop gain (Q16) for a T60 that does not depend on the note.
+ * Each trip round the loop lasts one period, so -60 dB after T60 needs
+ * gain = 2^(-10 * period / T60) per trip (2^-10 is about -60 dB).
+ * @param period_q8 the played period in output samples (at most the floor).
+ */
+static int32_t ks_decay_gain(uint8_t decay, uint32_t period_q8)
+{
+    uint32_t t60 = ks_decay_rt60[decay & 0x7fu];
+    /* exponent = 10 * period / T60, Q16. period * 10 < 2^27 here, so it is
+     * shifted by 5 and T60 (>= 3360) by 3 to keep 32 bits: one divide. */
+    uint32_t gain = ks_exp2_neg(((period_q8 * 10u) << 5) / (t60 >> 3));
+    if (gain > 65535u) gain = 65535u;
+    /* The top of the knob crossfades to an endless string. */
+    if (decay > 120)
+        gain += ((65535u - gain) * ks_decay_infinite_q8[decay - 121]) >> 8;
+    return (int32_t)gain;
+}
+
+/* TONE 0..3: the lowpass cutoff in semitones above the note before DECAY
+ * adds its share; Rings' 24 + brightness^2 * 24 in four steps. TONE 4 has
+ * no lowpass at all. */
+static const uint8_t ks_tone_base[4] = { 24, 30, 38, 48 };
+#define KS_TONE_OPEN 4
+/* Rings caps the cutoff 7 octaves above the note; past 0.45 of the loop
+ * rate the filter is left out, as it barely acts there. */
+#define KS_CUTOFF_MAX_Q8 (84 << 8)
+#define KS_CUTOFF_OPEN_Q8 (128 << 8)
+#define KS_X_OPEN_Q16 29491
+
+/** Cutoff in semitones above the note (Q8), as Rings sets it. */
+static uint32_t ks_tone_semitones(uint8_t tone, uint8_t decay)
+{
+    uint32_t s = ((uint32_t)ks_tone_base[tone] << 8)
+        + ks_decay_cutoff_q8[decay & 0x7fu];
+    if (s > KS_CUTOFF_MAX_Q8) s = KS_CUTOFF_MAX_Q8;
+    /* An endless string needs an open filter too. */
+    if (decay > 120)
+        s += ((KS_CUTOFF_OPEN_Q8 - s) * ks_decay_infinite_q8[decay - 121]) >> 8;
+    return s;
+}
+
+/**
+ * @brief TONE's lowpass coefficient (Q15, 0 = no filter) and its delay.
+ * The cutoff sits a fixed interval above the note, so a TONE setting
+ * sounds alike across the keyboard. The filter's delay at the note is
+ * taken as its DC group delay, (1 - k) / k samples: the cutoff is at least
+ * two octaves above the note, so the fundamental stays within ~1.5 cents.
+ * @param period_q8 the loop period, in loop steps.
+ * @param delay_q8 out: the filter's delay in loop steps, Q8.
+ */
+static int32_t ks_tone_setup(uint8_t tone, uint8_t decay, uint32_t period_q8,
+                             int32_t *delay_q8)
+{
+    uint32_t twelfths, ratio_q16, x_q16, index, fraction;
+    int32_t k;
+    *delay_q8 = 0;
+    if (tone >= KS_TONE_OPEN) return 0;
+    /* ratio = 2^(semitones / 12), Q16; up to 2^(128/12) < 2^11. */
+    twelfths = (ks_tone_semitones(tone, decay) << 8) / 12u;
+    ratio_q16 = (twelfths & 0xffffu)
+        ? ks_exp2_neg(65536u - (twelfths & 0xffffu)) << ((twelfths >> 16) + 1)
+        : 65536u << (twelfths >> 16);
+    /* x = cutoff / loop rate = ratio / period, Q16. ratio < 2^27, so
+     * ratio << 4 fits; period >> 4 keeps 6+ bits, enough for a cutoff. */
+    x_q16 = (ratio_q16 << 4) / (period_q8 >> 4);
+    if (x_q16 >= KS_X_OPEN_Q16) return 0;
+    index = x_q16 >> 8;
+    fraction = x_q16 & 255u;
+    k = (int32_t)ks_onepole_k[index]
+        + ((((int32_t)ks_onepole_k[index + 1] - (int32_t)ks_onepole_k[index])
+            * (int32_t)fraction) >> 8);
+    if (k < 1) k = 1;
+    *delay_q8 = ((32768 - k) << 8) / k;
+    return k;
+}
+
+/**
+ * @brief Loop speed for a period: full rate while the string fits in the
+ * line, slower below that. The loop then has a shorter period of its own.
+ */
+static void ks_loop_rate(struct ks_loop *loop, uint32_t period_q8)
+{
+    if (period_q8 <= KS_PERIOD_MAX_Q8) {
+        loop->rate = KS_RATE_FULL;
+        loop->period_q8 = period_q8;
+        return;
+    }
+    /* rate = MAX / period, Q15: MAX << 12 fits 32 bits and period >> 4
+     * keeps 15+ bits, so the pitch error stays below 0.5 cent. */
+    loop->rate = (int32_t)(((KS_PERIOD_MAX_Q8 << 12) / (period_q8 >> 4)) >> 1);
+    loop->period_q8 = ((period_q8 >> 7) * (uint32_t)loop->rate) >> 8;
 }
 
 /**
@@ -89,12 +194,15 @@ static int32_t ks_decay_gain(uint8_t decay)
  */
 static void ks_loop_setup(struct ks_loop *loop, const struct ks_params *p)
 {
-    int32_t period_q8 = (int32_t)ks_fold_period_q8(p->period_q8);
-    int32_t filters_q8, rest_q8, taps;
-    loop->damp = (int32_t)p->damp * 129; /* 0 .. 16383 = 0.5 */
+    uint32_t played_q8 = ks_limit_period(p->period_q8);
+    int32_t period_q8, filters_q8, rest_q8, taps, tone_delay_q8;
+    ks_loop_rate(loop, played_q8);
+    period_q8 = (int32_t)loop->period_q8;
+    loop->tone = ks_tone_setup(p->tone, p->decay, loop->period_q8,
+                               &tone_delay_q8);
     loop->stiff = -((int32_t)(p->stiff & 0x7fu) * 116);
-    loop->gain = ks_decay_gain(p->decay);
-    filters_q8 = (loop->damp >> 7)
+    loop->gain = ks_decay_gain(p->decay, played_q8);
+    filters_q8 = tone_delay_q8
         + 2 * (int32_t)ks_stiff_delay_q8[p->stiff & 0x7fu];
     rest_q8 = period_q8 - filters_q8;
     /* Keep at least two whole taps plus a 0.5 fraction; very high notes
@@ -121,17 +229,20 @@ static uint32_t ks_source_length(uint8_t exciter, uint32_t period)
  * A string that still rings is plucked again: the excitation adds to it.
  * A silent or sleeping string has stale samples in its line, so the first
  * `taps` samples (one trip round the loop) ignore what the line returns.
- * That avoids clearing 2 KB inside the audio interrupt.
+ * That avoids clearing 4 KB inside the audio interrupt.
  */
 static void ks_voice_trigger(struct ks_voice *v, const struct ks_params *p,
                              const struct ks_loop *loop)
 {
-    uint32_t period = ks_fold_period_q8(p->period_q8) >> 8;
+    uint32_t period = loop->period_q8 >> 8;
     uint32_t source_length;
     if (!v->active || v->sleeping) {
-        v->damp_z = 0;
+        v->tone_z = 0;
         v->st1_x = v->st1_y = v->st2_x = v->st2_y = 0;
         v->fr_x = v->fr_y = 0;
+        v->gain_rest = 0;
+        v->src_phase = KS_RATE_FULL;
+        v->src_prev = v->src_cur = 0;
         v->replace_left = loop->taps;
     } else {
         v->replace_left = 0;
@@ -202,20 +313,40 @@ static int32_t ks_excitation(struct ks_voice *v, uint8_t bright)
     return (v->exc_lp * v->exc_gain) >> 15;
 }
 
+/**
+ * @brief y * gain (Q16) with the rounding remainder carried to the next
+ * sample (first-order error feedback).
+ * Plain truncation of an int16 string loses a whole LSB per trip on
+ * positive samples and none on negative ones: that bias would swamp the
+ * Q16 gain of long decays and push the string towards a negative offset.
+ * Carrying the remainder makes the average gain exact for both signs, so
+ * the string decays as asked, down to zero.
+ * |y| <= 2^15 and gain < 2^16, so y * gain + rest fits 32 bits.
+ */
+static int32_t ks_apply_gain(struct ks_voice *v, int32_t y, int32_t gain)
+{
+    int32_t scaled = y * gain + v->gain_rest;
+    v->gain_rest = (int32_t)((uint32_t)scaled & 0xffffu);
+    return scaled >> 16;
+}
+
 /** One trip of the string loop; returns the sample written to the line. */
 static int32_t ks_loop_step(struct ks_voice *v, const struct ks_loop *loop,
                             int32_t excitation, int replacing)
 {
-    int32_t x = replacing ? 0 : v->line[(v->write - loop->taps) & KS_LINE_MASK];
-    int32_t y = x + (((v->damp_z - x) * loop->damp) >> 15);
-    v->damp_z = x;
+    int32_t y = replacing ? 0 : v->line[(v->write - loop->taps) & KS_LINE_MASK];
+    if (loop->tone) {
+        /* |y - z| <= 2^16 and tone <= 2^15: fits 32 bits. */
+        v->tone_z += ((y - v->tone_z) * loop->tone) >> 15;
+        y = v->tone_z;
+    }
     y = ks_allpass(&v->st1_x, &v->st1_y, y, loop->stiff);
     y = ks_allpass(&v->st2_x, &v->st2_y, y, loop->stiff);
     y = ks_allpass(&v->fr_x, &v->fr_y, y, loop->frac);
     /* Allpasses can overshoot their input peak; clamp before the gain so
      * the product stays in 32 bits. */
     y = ks_clamp(y, -32768, 32767);
-    y = ((y * loop->gain) >> 15) + excitation;
+    y = ks_apply_gain(v, y, loop->gain) + excitation;
     y = ks_clamp(y, -32768, 32767);
     v->line[v->write & KS_LINE_MASK] = (int16_t)y;
     ++v->write;
@@ -227,9 +358,12 @@ void ks_voice_init(struct ks_voice *v)
     uint32_t i;
     for (i = 0; i < KS_LINE_SIZE; ++i) v->line[i] = 0;
     v->write = 0;
-    v->damp_z = 0;
+    v->src_phase = KS_RATE_FULL;
+    v->src_prev = v->src_cur = 0;
+    v->tone_z = 0;
     v->st1_x = v->st1_y = v->st2_x = v->st2_y = 0;
     v->fr_x = v->fr_y = 0;
+    v->gain_rest = 0;
     v->exc_n = v->exc_len = v->exc_comb = v->exc_inc = 0;
     v->replace_left = v->exc_period = 0;
     v->exc_lp = v->exc_gain = 0;
@@ -240,7 +374,7 @@ void ks_voice_init(struct ks_voice *v)
 }
 
 /**
- * @brief Silence a voice without clearing its 2 KB line.
+ * @brief Silence a voice without clearing its 4 KB line.
  * Cheap enough for the audio interrupt: the next trigger sees an inactive
  * voice and ignores the stale line for one trip round the loop.
  */
@@ -286,6 +420,22 @@ static void ks_zero(int32_t *out, uint32_t n)
     for (i = 0; i < n; ++i) out[i] = 0;
 }
 
+/**
+ * @brief One loop step: excitation, string, peak and the replace window.
+ * @return the new loop sample.
+ */
+static int32_t ks_step(struct ks_voice *v, const struct ks_loop *loop,
+                       uint8_t bright, int32_t *peak)
+{
+    int replacing = v->replace_left != 0;
+    int32_t excitation = ks_excitation(v, bright);
+    int32_t y = ks_loop_step(v, loop, excitation, replacing);
+    int32_t mag = y < 0 ? -y : y;
+    if (replacing) --v->replace_left;
+    if (mag > *peak) *peak = mag;
+    return y;
+}
+
 void ks_voice_render(struct ks_voice *v, const struct ks_params *p,
                      int trigger, int32_t *out, uint32_t n)
 {
@@ -299,12 +449,18 @@ void ks_voice_render(struct ks_voice *v, const struct ks_params *p,
         return;
     }
     for (i = 0; i < n; ++i) {
-        int replacing = v->replace_left != 0;
-        int32_t excitation = ks_excitation(v, p->bright);
-        int32_t y = ks_loop_step(v, &loop, excitation, replacing);
-        int32_t mag = y < 0 ? -y : y;
-        if (replacing) --v->replace_left;
-        if (mag > peak) peak = mag;
+        int32_t y;
+        /* At full rate this steps every sample and outputs src_cur exactly;
+         * slower, it steps when the phase wraps and interpolates. */
+        v->src_phase += loop.rate;
+        if (v->src_phase > KS_RATE_FULL) {
+            v->src_phase -= KS_RATE_FULL;
+            v->src_prev = v->src_cur;
+            v->src_cur = ks_step(v, &loop, p->bright, &peak);
+        }
+        /* |cur - prev| <= 65535 and phase <= 2^15: fits 32 bits. */
+        y = v->src_prev
+            + (((v->src_cur - v->src_prev) * v->src_phase) >> 15);
         /* A full-scale string reaches 0.25 FS, Sophie's source level. */
         y >>= 2;
         if (v->fade_left) {

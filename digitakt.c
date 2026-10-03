@@ -32,8 +32,8 @@
  *   D SAMP                     -> unused, stock sample selector
  *   E POS   0..64,  def 0      -> pluck position comb (default: off)
  *   F SOFT  0..63,  def 0      -> darker excitation (default: bright)
- *   G TONE  0..4,   def 0      -> loop damping in five steps (0: classic)
- *   H DECAY 0..127, def 100    -> loop gain */
+ *   G TONE  0..4,   def 0      -> loop lowpass: 0 warm .. 3 bright, 4 open
+ *   H DECAY 0..127, def 100    -> T60, 0.07 s .. ~17 s, then endless */
 #define P_TUNE 0
 #define P_EXC 2
 #define P_STIFF 4
@@ -42,36 +42,59 @@
 #define P_TONE 12
 #define P_DECAY 14
 
-/* 8 x ~2.1 KB, zeroed by core at boot: every voice starts inactive. */
+/* 8 x ~4.1 KB, zeroed by core at boot: every voice starts inactive. */
 static struct ks_voice ks_voices[TRACKS];
 
 static uint32_t ks_u7(int32_t track, int32_t offset)
 { return ((uint32_t)(uint16_t)VP(track, offset) >> 8) & 0x7fu; }
 
-/** Stock pitch ratio for the track's note and TUNE (Q29), as digisophie
- * reads it: the same table the stock sample playback uses. */
-static uint32_t ks_pitch_ratio(int32_t track)
-{
-    int32_t pitch = ((int32_t)VP(track, P_TUNE) - 0x4000) * 256
-        + NOTE(track) + (3 << 16);
-    if (pitch < 0) pitch = 0;
-    if (pitch > (87 << 16)) pitch = 87 << 16;
-    return PITCH_TAB[(uint32_t)pitch / 384u];
-}
+/* String period at pitch ratio 1.0, in 48 kHz samples, Q8. Ratio 1.0 is
+ * the stock playback rate of an untransposed sample, which the Digitakt
+ * plays on note C4; STRING tunes it to 261.63 Hz: 48000 * 256 / 261.63. */
+#define KS_C4_PERIOD_Q8 46968u
+/* The stock pitch table covers 88 semitones; STRING extends it by
+ * octaves on both sides instead of clamping. */
+#define KS_TABLE_TOP (87 << 16)
+#define KS_OCTAVE (12 << 16)
 
 /**
  * @brief Pitch ratio (Q29) to a string period in 48 kHz samples, Q8.
- * Ratio 1.0 plays 46.875 Hz (digisophie's calibration), so the period is
- * 2^39 / ratio samples, 2^47 / ratio in Q8. The divisor is normalized to
+ * period = KS_C4_PERIOD_Q8 * 2^29 / ratio. The divisor is normalized to
  * 16 bits first: one 32-bit divide per block, error below 0.1 cent.
  */
 static uint32_t ks_period_q8(uint32_t ratio)
 {
     uint32_t shift = 0;
-    if (ratio < (1u << 22)) ratio = 1u << 22; /* below audio: folded anyway */
+    uint32_t inverse;
+    if (ratio < (1u << 22)) ratio = 1u << 22; /* below the table: unused */
     while ((ratio >> shift) >= (1u << 16)) ++shift;
-    /* shift >= 7 here, so the result stays below 2^25. */
-    return ((1u << 31) / (ratio >> shift)) << (16u - shift);
+    /* inverse = 2^31 / (ratio >> shift), in [2^15, 2^16]; then
+     * period = C4 * inverse * 2^(16 - shift) / 2^18. C4 * inverse stays
+     * below 2^32, and shift >= 7 here. */
+    inverse = (1u << 31) / (ratio >> shift);
+    return (KS_C4_PERIOD_Q8 * inverse) >> (2u + shift);
+}
+
+/**
+ * @brief The track's note and TUNE as a string period (Q8), using the
+ * same stock pitch table as sample playback (digisophie reads it alike).
+ * Pitches outside the table are moved into it by whole octaves and the
+ * period is doubled or halved to match.
+ */
+static uint32_t ks_track_period_q8(int32_t track)
+{
+    int32_t pitch = ((int32_t)VP(track, P_TUNE) - 0x4000) * 256
+        + NOTE(track) + (3 << 16);
+    int32_t octaves = 0; /* > 0: higher than the table */
+    uint32_t period;
+    while (pitch < 0) { pitch += KS_OCTAVE; --octaves; }
+    while (pitch > KS_TABLE_TOP) { pitch -= KS_OCTAVE; ++octaves; }
+    period = ks_period_q8(PITCH_TAB[(uint32_t)pitch / 384u]);
+    for (; octaves > 0; --octaves) period >>= 1;
+    /* The engine stops at its ~1.5 Hz floor; stop doubling past it, so the
+     * period cannot overflow. */
+    for (; octaves < 0 && period <= KS_PERIOD_FLOOR_Q8; ++octaves) period <<= 1;
+    return period;
 }
 
 static void ks_read_params(int32_t track, struct ks_params *p)
@@ -80,17 +103,15 @@ static void ks_read_params(int32_t track, struct ks_params *p)
     static const uint8_t exciters[4] = {
         KS_EXC_BOW, KS_EXC_MALLET, KS_EXC_NOISE, KS_EXC_PLUCK
     };
-    /* TONE 0 is the classic two-tap average; higher steps ring brighter. */
-    static const uint8_t damp_steps[5] = { 127, 96, 64, 32, 0 };
     uint32_t tone = ks_u7(track, P_TONE);
     uint32_t pos = ks_u7(track, P_POS) * 2u;
     uint32_t soft = ks_u7(track, P_SOFT);
-    p->period_q8 = ks_period_q8(ks_pitch_ratio(track));
+    p->period_q8 = ks_track_period_q8(track);
     p->exciter = exciters[ks_u7(track, P_EXC) & 3u];
     p->stiff = (uint8_t)ks_u7(track, P_STIFF);
     p->pos = (uint8_t)(pos > 127u ? 127u : pos);
     p->bright = (uint8_t)(127u - (soft * 2u + (soft >= 63u)));
-    p->damp = damp_steps[tone > 4u ? 4u : tone];
+    p->tone = (uint8_t)(tone > 4u ? 4u : tone);
     p->decay = (uint8_t)ks_u7(track, P_DECAY);
     p->velocity = (uint8_t)(((uint32_t)(uint16_t)VEL(track) >> 8) & 0x7fu);
 }

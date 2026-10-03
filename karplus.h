@@ -5,14 +5,20 @@
 #include <stdint.h>
 
 #define KS_BLOCK_SIZE 32
-/* Delay line length per voice. 1024 int16 samples = 2 KB per track, 16 KB
- * for eight tracks, all static. At 48 kHz the lowest note is ~47 Hz;
- * lower notes are folded up by octaves (see ks_fold_period_q8). */
-#define KS_LINE_SIZE 1024u
+/* Delay line length per voice. 2048 int16 samples = 4 KB per track, 32 KB
+ * for eight tracks, all static. At 48 kHz the lowest note is ~23.5 Hz
+ * (F#0); lower notes run the loop slower (see KS_PERIOD_FLOOR_Q8). */
+#define KS_LINE_SIZE 2048u
 #define KS_LINE_MASK (KS_LINE_SIZE - 1u)
-/* Longest playable period, leaving room for the filters' own delay. */
-#define KS_PERIOD_MAX_Q8 (1000u << 8)
+/* Longest playable period, leaving room for the filters' own delay
+ * (at most about 7 samples with STIFF at maximum). */
+#define KS_PERIOD_MAX_Q8 (2040u << 8)
 #define KS_PERIOD_MIN_Q8 (4u << 8)
+/* Longer periods run the loop slower than the output (as Rings does)
+ * instead of folding up an octave. Floor: 1/16 of the output rate, so the
+ * lowest note is about 1.5 Hz. */
+#define KS_PERIOD_FLOOR_Q8 (KS_PERIOD_MAX_Q8 << 4)
+#define KS_RATE_FULL 32768 /* loop steps per output sample, Q15 */
 
 /* Excitation types, selected by the EXC control in four zones. */
 enum ks_exciter {
@@ -28,8 +34,8 @@ struct ks_params {
     uint32_t period_q8; /* string period in 48 kHz samples, Q8 */
     uint8_t exciter;    /* enum ks_exciter */
     uint8_t bright;     /* excitation lowpass: 0 dark .. 127 open */
-    uint8_t decay;      /* loop gain: 0 short .. 127 nearly infinite */
-    uint8_t damp;       /* loop lowpass: 0 metallic .. 127 classic KS */
+    uint8_t decay;      /* T60: 0 = 0.07 s .. 123 = ~17 s, 127 = infinite */
+    uint8_t tone;       /* loop lowpass: 0 warm .. 3 bright, 4 open */
     uint8_t pos;        /* pluck position comb: 0 off, 1..127 bridge..middle */
     uint8_t stiff;      /* dispersion: 0 ideal string .. 127 stiff/bell */
     uint8_t velocity;   /* 0..127 */
@@ -38,15 +44,20 @@ struct ks_params {
 struct ks_voice {
     int16_t line[KS_LINE_SIZE]; /* the string; Q15 */
     uint32_t write;             /* next write index into line */
+    /* Output resampling for notes longer than the line (see KS_RATE_FULL):
+     * the output crossfades from the previous to the current loop sample. */
+    int32_t src_phase;          /* Q15, in (0, KS_RATE_FULL] */
+    int32_t src_prev, src_cur;
     /* Loop filter states. */
-    int32_t damp_z;                  /* previous delay-line read */
+    int32_t tone_z;                  /* TONE lowpass state */
     int32_t st1_x, st1_y, st2_x, st2_y; /* stiffness allpasses */
     int32_t fr_x, fr_y;              /* fractional tuning allpass */
+    int32_t gain_rest;  /* DECAY's rounding remainder, carried (Q16) */
     /* Excitation, fixed at the trigger. */
-    uint32_t exc_n;       /* samples since the trigger */
+    uint32_t exc_n;       /* loop steps since the trigger */
     uint32_t exc_len;     /* excitation stops here (BOW: while held) */
-    uint32_t replace_left; /* samples that still ignore the stale line */
-    uint32_t exc_period;  /* source period in whole samples */
+    uint32_t replace_left; /* loop steps that still ignore the stale line */
+    uint32_t exc_period;  /* source period in whole loop steps */
     uint32_t exc_comb;    /* POS comb delay in samples, 0 = off */
     uint32_t exc_inc;     /* triangle phase step, 65536/period */
     int32_t exc_lp;       /* BRIGHT lowpass state */
@@ -65,6 +76,5 @@ void ks_voice_gate(struct ks_voice *voice, int32_t amp_level,
                    int32_t amp_phase);
 void ks_voice_render(struct ks_voice *voice, const struct ks_params *params,
                      int trigger, int32_t *output, uint32_t size);
-uint32_t ks_fold_period_q8(uint32_t period_q8);
 
 #endif
