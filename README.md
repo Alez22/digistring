@@ -5,6 +5,9 @@ Digitakt (Mk1), OS 1.53. It is an [elekloader](https://github.com/irpina/elekloa
 mod: a new machine in the SRC menu whose audio goes through the Digitakt's
 regular AMP, filter, mixer and effects path, like any stock machine.
 
+Get the current `.elemod` and release notes from the
+[v0.6.0 release](https://github.com/Alez22/digistring/releases/tag/v0.6.0).
+
 It works on its own and alongside
 [Sophie for Digitakt](https://github.com/soejrd/digisophie): the two mods
 patch different bytes and can be installed together.
