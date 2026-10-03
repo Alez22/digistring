@@ -4,7 +4,7 @@
   "license": "MIT",
   "title": "STRING",
   "category": "Synthesis",
-  "author": "digistring contributors",
+  "author": "Alez22",
   "description": "Karplus-Strong plucked string SRC machine with its own SRC page names and menu icon. Its audio enters the normal Digitakt AMP, filter, mixer and sends. Works alone or alongside digisophie.",
   "device": "digitakt-mk1",
   "os": "1.53",
