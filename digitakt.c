@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: MIT
  *
- * Digitakt Mk1 OS 1.53 adapter for the Karplus-Strong engine.
+ * Digitakt Mk1 OS 1.53 and 1.54 adapter for the Karplus-Strong engine.
  *
  * The RAM addresses and the pitch lookup below were found by the digisophie
- * project (MIT) and are used the same way; they are valid for OS 1.53 only.
+ * project (MIT) and are used the same way. mod.json's 1.54 port builds with
+ * -DDIGISTRING_OS154: there the SRAM block (0x8000xxxx) is where it was,
+ * while the RAM past the image and the pitch table moved.
  */
 #include "karplus.h"
 
@@ -18,9 +20,18 @@
 #define NOTE(t) (*(volatile const int32_t *)(unsigned long)(0x80001f28u + 4u * (uint32_t)(t)))
 #define VEL(t) (*(volatile const int16_t *)(unsigned long)(0x80001f18u + 2u * (uint32_t)(t)))
 #define TRIG_BITS (*(volatile const uint32_t *)(unsigned long)0x80001228u)
-#define AMP_LEVEL(t) (*(volatile const int32_t *)(unsigned long)(0x4199df58u + 12u * (uint32_t)(t)))
-#define AMP_PHASE(t) (*(volatile const int32_t *)(unsigned long)(0x4199df54u + 12u * (uint32_t)(t)))
-#define PITCH_TAB ((const uint32_t *)(unsigned long)0x4019b1c0u)
+#ifdef DIGISTRING_OS154
+#define AMP_LEVEL_AT 0x4199ef58u
+#define AMP_PHASE_AT 0x4199ef54u
+#define PITCH_TAB_AT 0x4019b4c0u
+#else
+#define AMP_LEVEL_AT 0x4199df58u
+#define AMP_PHASE_AT 0x4199df54u
+#define PITCH_TAB_AT 0x4019b1c0u
+#endif
+#define AMP_LEVEL(t) (*(volatile const int32_t *)(unsigned long)(AMP_LEVEL_AT + 12u * (uint32_t)(t)))
+#define AMP_PHASE(t) (*(volatile const int32_t *)(unsigned long)(AMP_PHASE_AT + 12u * (uint32_t)(t)))
+#define PITCH_TAB ((const uint32_t *)(unsigned long)PITCH_TAB_AT)
 
 /* SRC slots A..H (byte offsets into VP). The machine borrows SLICE's
  * parameters (core descriptor `params` = 3), so it keeps SLICE's ranges and
@@ -125,7 +136,7 @@ static void ks_zero_block(int32_t *out)
 /**
  * @brief Render every STRING track into its source buffer.
  * Called from the render after the stock source voices and before the
- * buffers go to AMP/filter (site 0x40077fc2), once per 32-frame block.
+ * buffers go to AMP/filter (site 0x40077fb2), once per 32-frame block.
  * Interrupt level: no firmware calls, static memory only.
  */
 void digistring_inject(void)

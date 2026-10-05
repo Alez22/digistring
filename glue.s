@@ -1,5 +1,34 @@
 | SPDX-License-Identifier: MIT
 | STRING (machine 8): core 2.1 machine descriptor and the render hook.
+
+| Firmware addresses that moved in OS 1.54 (mod.json's 1.54 port
+| assembles with --defsym OS154=1). Every other address here, the sites'
+| continuations included, is the same in both releases. Comments name
+| the 1.53 addresses.
+        .ifdef  OS154
+        .equ    LAB_TABLE, 0x401aa09c       | lea'd by the label routines
+        .equ    UI_REC_BASE, 0x4197e2f8     | the UI records
+        .equ    POP_ARG, 0x4197de98         | the pop-up text's first argument
+        .equ    LFO_LABEL_ARG, 0x401d0d7e   | pushed after a DEST name
+        .equ    LFO_POP_ARG, 0x401d0405     | pushed after a DEST row's names
+        .equ    LFO_POP_RET, 0x400a44dc
+        .equ    LFO_POP_FB_RET, 0x400a4558
+        .equ    LFO_OV_GROUP_FN, 0x4017af20 | called with the DEST box's group
+        .equ    LFO_OV_NAME_ARG, 0x401c3de2 | pushed after the DEST box's name
+        .equ    BMP_VT, 0x401b7734          | the stock Bitmap vtable
+        .else
+        .equ    LAB_TABLE, 0x401a9d9c
+        .equ    UI_REC_BASE, 0x4197d2f8
+        .equ    POP_ARG, 0x4197ce98
+        .equ    LFO_LABEL_ARG, 0x401d09ca
+        .equ    LFO_POP_ARG, 0x401d0051
+        .equ    LFO_POP_RET, 0x400a4380
+        .equ    LFO_POP_FB_RET, 0x400a43fc
+        .equ    LFO_OV_GROUP_FN, 0x4017ac20
+        .equ    LFO_OV_NAME_ARG, 0x401c3a62
+        .equ    BMP_VT, 0x401b73b4
+        .endif
+
         .section .run, "ax"
 
 | Render hook at 0x40077fb2, replacing `addi.l #68,%d7` (6 bytes) with a
@@ -43,7 +72,6 @@ ks_short: .asciz "STRG"
 |   .##.....##.
 |   ...#####...
 |   ...........
-        .equ    BMP_VT, 0x401b73b4
         .balign 4
 ks_icon:
         .long   BMP_VT, 11, 7, 1, ks_icon_px, ks_icon_mask, 0
@@ -87,7 +115,7 @@ digistring_lab_short_s:
         bne.s   1f
         movem.l (%sp), %d0-%d1
         lea     8(%sp), %sp
-        lea     0x401a9d9c, %a0         | the instruction this replaced
+        lea     LAB_TABLE, %a0          | the instruction this replaced
         jmp     0x4000fe9c
 1:      lea     8(%sp), %sp             | ours: the routine returns it
         rts
@@ -102,7 +130,7 @@ digistring_lab_long_s:
         bne.s   1f
         movem.l (%sp), %d0-%d1
         lea     8(%sp), %sp
-        lea     0x401a9d9c, %a0         | the instruction this replaced
+        lea     LAB_TABLE, %a0          | the instruction this replaced
         jmp     0x4000febe
 1:      lea     8(%sp), %sp
         rts
@@ -124,7 +152,7 @@ digistring_ui_rec_s:
         bra.s   2f
 1:      movem.l (%sp), %d0-%d1
         lea     8(%sp), %sp
-2:      addi.l  #0x4197d2f8, %d0        | the instruction this replaced
+2:      addi.l  #UI_REC_BASE, %d0       | the instruction this replaced
         rts
 
 | Value text under a knob, 0x4000f324(obj, param, value, out): its call
@@ -189,7 +217,7 @@ digistring_pop_text_s:
         bne.s   1f
         movem.l (%sp), %d0-%d1
         lea     8(%sp), %sp
-        pea     0x4197ce98              | the instruction this replaced
+        pea     POP_ARG                 | the instruction this replaced
         jmp     0x40065800
 1:      lea     8(%sp), %sp
         rts
@@ -217,7 +245,7 @@ digistring_lfo_label_s:
         move.l  %d0, 16(%sp)            | the name argument
 1:      movem.l (%sp), %d0-%d1/%a0-%a1
         lea     16(%sp), %sp
-        pea     0x401d09ca              | the instruction this replaced
+        pea     LFO_LABEL_ARG           | the instruction this replaced
         jmp     0x40060bb0
 
 | Destination popup rows "GROUP:Name": sites `pea 0x401d0051` at
@@ -248,8 +276,8 @@ digistring_lfo_pop_s:
         bsr.s   ks_lfo_pop
         movem.l (%sp), %d0-%d1/%a0-%a1
         lea     16(%sp), %sp
-        pea     0x401d0051              | the instruction this replaced
-        jmp     0x400a4380
+        pea     LFO_POP_ARG             | the instruction this replaced
+        jmp     LFO_POP_RET
 digistring_lfo_pop_fb_s:
         lea     -16(%sp), %sp
         movem.l %d0-%d1/%a0-%a1, (%sp)
@@ -257,8 +285,8 @@ digistring_lfo_pop_fb_s:
         bsr.s   ks_lfo_pop
         movem.l (%sp), %d0-%d1/%a0-%a1
         lea     16(%sp), %sp
-        pea     0x401d0051              | the instruction this replaced
-        jmp     0x400a43fc
+        pea     LFO_POP_ARG             | the instruction this replaced
+        jmp     LFO_POP_FB_RET
 
 | LFO overview, group line: its call `jsr 0x4017ac20` at 0x40065dec is
 | redirected here (keep2). 8(sp) holds the group; d3 = param.
@@ -274,7 +302,7 @@ digistring_lfo_ov_group_s:
         move.l  %d0, 16+8(%sp)          | the group argument
 1:      movem.l (%sp), %d0-%d1/%a0-%a1
         lea     16(%sp), %sp
-        jmp     0x4017ac20              | the call this replaced
+        jmp     LFO_OV_GROUP_FN         | the call this replaced
 
 | LFO overview, name line: site `pea 0x401c3a62` at 0x40065e6e, the
 | instruction after `pea 0x401d09ca`, which digimono hooks. 4(sp) holds
@@ -292,5 +320,5 @@ digistring_lfo_ov_name_s:
         move.l  %d0, 16+4(%sp)          | the name argument
 1:      movem.l (%sp), %d0-%d1/%a0-%a1
         lea     16(%sp), %sp
-        pea     0x401c3a62              | the instruction this replaced
+        pea     LFO_OV_NAME_ARG         | the instruction this replaced
         jmp     0x40065e74

@@ -116,7 +116,7 @@ enabling digihealth.
 ## Build from source (developers only)
 
 You need Python 3.9+, a source checkout of elekloader, the ColdFire cross
-toolchain and your stock OS 1.53 file. On Debian or Ubuntu:
+toolchain and your stock OS 1.53 or 1.54 file. On Debian or Ubuntu:
 
 ```sh
 sudo apt install binutils-m68k-linux-gnu gcc-m68k-linux-gnu
@@ -144,6 +144,10 @@ python3 -m elekloader.patch --stock $STOCK \
     --out Digitakt_OS1.53_STRING.syx --version K005
 ```
 
+For OS 1.54, build from the 1.54 stock file: the SDK picks `mod.json`'s
+1.54 port and writes `digistring-0.8.0-os1.54.elemod`; use core's
+`core-2.1-os1.54.elemod` with it.
+
 Add `--mod` lines (and the same files as `--with` to `lint`) for Sophie,
 digihealth or any other mod to build them into the same firmware; lint
 exits 0 only when the whole set links. STRING-fast is built from
@@ -155,7 +159,7 @@ exits 0 only when the whole set links. STRING-fast is built from
 | File | Role |
 | --- | --- |
 | `karplus.c` | Fixed-point Karplus-Strong engine at 48 kHz: delay line, fractional allpass tuning, note-tracking lowpass, stiffness allpasses, T60 decay, exciters, sleep |
-| `digitakt.c` | OS 1.53 adapter: reads pitch, controls, triggers and AMP state, renders each STRING track into its source buffer |
+| `digitakt.c` | OS 1.53/1.54 adapter: reads pitch, controls, triggers and AMP state, renders each STRING track into its source buffer |
 | `ui.c` | SRC page names, value texts, knob scaling, EXC icons and LFO names |
 | `ks_loop.inc` | The per-sample loop; STRING-fast compiles it a second time into `.fast` |
 | `glue.s` | Machine descriptor, menu icon and the assembly stubs at the patch sites |
@@ -185,7 +189,13 @@ exits 0 only when the whole set links. STRING-fast is built from
 To change the EXC icons, edit the ASCII art in `scripts/gen_icons.py` and
 run `python3 scripts/gen_icons.py > ks_icons.inc`.
 
-All addresses are for Digitakt Mk1 OS 1.53 only.
+All addresses are for Digitakt Mk1 OS 1.53 and 1.54. Most of 1.54 only
+moved: 16 of STRING's firmware addresses differ there (the RAM past the
+image by 0x1000, some code and strings by a few hundred bytes), and every
+site's stock instruction is the same as 1.53's but for those addresses.
+`mod.json`'s `ports` holds the 1.54 sites and builds the sources with
+`-DDIGISTRING_OS154` (C) and `--defsym OS154=1` (`glue.s`), which pick the
+moved addresses; the 1.53 build is unchanged.
 
 ## Credits and license
 

@@ -125,5 +125,101 @@
   },
   "conflicts": [
     "digistring-fast"
-  ]
+  ],
+  "ports": {
+    "1.54": {
+      "cflags": [
+        "-DDIGISTRING_OS154"
+      ],
+      "defsym": {
+        "OS154": "1"
+      },
+      "sites": [
+        {
+          "addr": "0x40077fb2",
+          "stock": "068700000044",
+          "op": "jmp",
+          "target": "digistring_inject_s"
+        },
+        {
+          "addr": "0x400325e8",
+          "stock": "4eb9400657cc",
+          "op": "keep2",
+          "target": "digistring_layout_s"
+        },
+        {
+          "addr": "0x4003ab02",
+          "stock": "47f9400657cc",
+          "op": "keep2",
+          "target": "digistring_layout_s"
+        },
+        {
+          "addr": "0x4000fe96",
+          "stock": "41f9401aa09c",
+          "op": "jmp",
+          "target": "digistring_lab_short_s"
+        },
+        {
+          "addr": "0x4000feb8",
+          "stock": "41f9401aa09c",
+          "op": "jmp",
+          "target": "digistring_lab_long_s"
+        },
+        {
+          "addr": "0x400657aa",
+          "stock": "06804197e2f8",
+          "op": "jmp",
+          "target": "digistring_ui_rec_s"
+        },
+        {
+          "addr": "0x4000f33e",
+          "stock": "4eb940065794",
+          "op": "keep2",
+          "target": "digistring_val_text_s"
+        },
+        {
+          "addr": "0x4000f2dc",
+          "stock": "4eb940065794",
+          "op": "keep2",
+          "target": "digistring_knob_s"
+        },
+        {
+          "addr": "0x400657fa",
+          "stock": "48794197de98",
+          "op": "jmp",
+          "target": "digistring_pop_text_s"
+        },
+        {
+          "addr": "0x40060baa",
+          "stock": "4879401d0d7e",
+          "op": "jmp",
+          "target": "digistring_lfo_label_s"
+        },
+        {
+          "addr": "0x400a44d6",
+          "stock": "4879401d0405",
+          "op": "jmp",
+          "target": "digistring_lfo_pop_s"
+        },
+        {
+          "addr": "0x400a4552",
+          "stock": "4879401d0405",
+          "op": "jmp",
+          "target": "digistring_lfo_pop_fb_s"
+        },
+        {
+          "addr": "0x40065dec",
+          "stock": "4eb94017af20",
+          "op": "keep2",
+          "target": "digistring_lfo_ov_group_s"
+        },
+        {
+          "addr": "0x40065e6e",
+          "stock": "4879401c3de2",
+          "op": "jmp",
+          "target": "digistring_lfo_ov_name_s"
+        }
+      ]
+    }
+  }
 }

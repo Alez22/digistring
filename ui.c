@@ -46,7 +46,17 @@ static const char ks_exc_names[4][6] = { "BOW", "HIT", "NOISE", "PLUCK" };
 
 #include "ks_icons.inc"
 
-/* The firmware's Bitmap object, as its blit (0x400c2960) reads it:
+/* Firmware addresses that moved in OS 1.54 (mod.json's port builds with
+ * -DDIGISTRING_OS154): the stock Bitmap vtable and the blit routine. */
+#ifdef DIGISTRING_OS154
+#define KS_BMP_VT 0x401b7734u
+#define KS_BLIT_AT 0x400c2b88u
+#else
+#define KS_BMP_VT 0x401b73b4u
+#define KS_BLIT_AT 0x400c2960u
+#endif
+
+/* The firmware's Bitmap object, as its blit (KS_BLIT_AT) reads it:
  * width, height, longs per column, pixels by column, mask. The vtable is
  * the stock Bitmap one, as for the menu icon in glue.s. */
 struct ks_bitmap {
@@ -56,7 +66,6 @@ struct ks_bitmap {
     int32_t unused;
 };
 
-#define KS_BMP_VT 0x401b73b4u
 static const struct ks_bitmap ks_exc_icons[4] = {
     { KS_BMP_VT, KS_ICON_W, KS_ICON_H, 1, ks_icon_bow, ks_icon_mask, 0 },
     { KS_BMP_VT, KS_ICON_W, KS_ICON_H, 1, ks_icon_hit, ks_icon_mask, 0 },
@@ -67,7 +76,7 @@ static const struct ks_bitmap ks_exc_icons[4] = {
 /* blit(dst, src, x, y, centre): with centre set, (x, y) is the middle. */
 typedef void (*ks_blit_fn)(void *dst, const void *src, int32_t x, int32_t y,
                            int32_t centre);
-#define KS_BLIT ((ks_blit_fn)0x400c2960u)
+#define KS_BLIT ((ks_blit_fn)KS_BLIT_AT)
 
 /* The machine whose SRC page layout was last asked for; glue.s writes it
  * from the two callers of the layout routine. */
