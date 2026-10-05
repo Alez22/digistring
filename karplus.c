@@ -187,7 +187,7 @@ static void ks_loop_rate(struct ks_loop *loop, uint32_t period_q8)
         return;
     }
     /* rate = MAX / period, Q15: MAX << 12 fits 32 bits and period >> 4
-     * keeps 15+ bits, so the pitch error stays below 0.5 cent. */
+     * keeps 14+ bits, so the pitch error stays below 0.5 cent. */
     loop->rate = (int32_t)(((KS_PERIOD_MAX_Q8 << 12) / (period_q8 >> 4)) >> 1);
     loop->period_q8 = ((period_q8 >> 7) * (uint32_t)loop->rate) >> 8;
 }
@@ -358,7 +358,7 @@ KS_HOT int32_t ks_loop_step(struct ks_voice *v, const struct ks_loop *loop,
     return y;
 }
 
-void ks_voice_init(struct ks_voice *v)
+void digistring_voice_init(struct ks_voice *v)
 {
     uint32_t i;
     for (i = 0; i < KS_LINE_SIZE; ++i) v->line[i] = 0;
@@ -383,7 +383,7 @@ void ks_voice_init(struct ks_voice *v)
  * Cheap enough for the audio interrupt: the next trigger sees an inactive
  * voice and ignores the stale line for one trip round the loop.
  */
-void ks_voice_stop(struct ks_voice *v)
+void digistring_voice_stop(struct ks_voice *v)
 {
     v->active = 0;
 }
@@ -392,7 +392,7 @@ void ks_voice_stop(struct ks_voice *v)
  * passes through zero at the start of an envelope, so only phase zero (the
  * released/idle state) with a low level counts as quiet. Unlike Sophie, a
  * sleeping string is only woken by a trigger: its energy is gone anyway. */
-void ks_voice_gate(struct ks_voice *v, int32_t amp_level, int32_t amp_phase)
+void digistring_voice_gate(struct ks_voice *v, int32_t amp_level, int32_t amp_phase)
 {
     uint32_t mag;
     if (!v->active) return;
@@ -472,7 +472,7 @@ static int ks_fast_ready(void) { return 0; }
 #define ks_render_samples_fast ks_render_samples
 #endif
 
-void ks_voice_render(struct ks_voice *v, const struct ks_params *p,
+void digistring_voice_render(struct ks_voice *v, const struct ks_params *p,
                      int trigger, int32_t *out, uint32_t n)
 {
     struct ks_loop loop;

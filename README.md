@@ -13,7 +13,11 @@ Get the current `.elemod` and release notes from the
 
 It works on its own and alongside
 [Sophie for Digitakt](https://github.com/soejrd/digisophie): the two mods
-patch different bytes and can be installed together.
+patch different bytes and can be installed together. elekloader's lint
+also links it with every other Digitakt mod in its shop: digislicer,
+digineighbor, digichain, digimono, digipoly, digihealth, digieq,
+digimatrix and digiutils (some of those cannot be combined with one
+another, independently of STRING).
 
 ---
 
@@ -55,7 +59,7 @@ give a sensible new sound.
   adds to the vibration, as on a real string.
 - **Pitch:** an untransposed note plays C4 at 261.6 Hz, and the keyboard
   follows equal temperament up to about 12 kHz.
-- **Low notes:** below F#0 (23.5 Hz) the string no longer fits its delay
+- **Low notes:** below F#1 (47 Hz) the string no longer fits its delay
   line and runs at a lower internal rate instead, down to about 1.5 Hz,
   without octave jumps.
 - **STIFF** keeps the fundamental in tune up to about 880 Hz. Above that,
@@ -132,16 +136,17 @@ the elekloader checkout:
 STOCK=/path/to/Digitakt_OS1.53.syx
 python3 -m elekloader.sdk.build mods/core --stock $STOCK
 python3 -m elekloader.sdk.build /path/to/digistring --stock $STOCK
-python3 -m elekloader.lint --stock $STOCK \
-    mods/core/out/core-2.1.elemod /path/to/digistring/out/digistring-0.7.0.elemod
+python3 -m elekloader.lint /path/to/digistring/out/digistring-0.8.0.elemod \
+    --stock $STOCK --with mods/core/out/core-2.1.elemod
 python3 -m elekloader.patch --stock $STOCK \
     --mod mods/core/out/core-2.1.elemod \
-    --mod /path/to/digistring/out/digistring-0.7.0.elemod \
+    --mod /path/to/digistring/out/digistring-0.8.0.elemod \
     --out Digitakt_OS1.53_STRING.syx --version K005
 ```
 
-Add `--mod` lines (and the same files to `lint`) for Sophie or digihealth
-to build them into the same firmware. STRING-fast is built from
+Add `--mod` lines (and the same files as `--with` to `lint`) for Sophie,
+digihealth or any other mod to build them into the same firmware; lint
+exits 0 only when the whole set links. STRING-fast is built from
 `variants/fast`, whose `mod.json` compiles the same sources with
 `-DKS_FAST`; it needs digihealth in the firmware.
 
@@ -158,18 +163,21 @@ to build them into the same firmware. STRING-fast is built from
 | `scripts/gen_tables.py` | Generates `ks_tables.inc` (allpass coefficients) |
 | `scripts/gen_icons.py` | Generates `ks_icons.inc` from ASCII-art icons |
 
-- **Audio:** the render is hooked at `0x40077fc2`, right after the stock
-  source voices and before the buffers reach AMP and filter. Each STRING
+- **Audio:** the render is hooked at `0x40077fb2`, right after the stock
+  source voices and before the buffers reach AMP and filter; the
+  following instructions are other mods' render hooks. Each STRING
   track gets 32 samples per block.
-- **Memory:** each track's delay line is 4 KB, all statically allocated:
-  about 33 KB of RAM in total.
+- **Memory:** each track's delay line is 2 KB, all statically allocated:
+  about 17 KB of RAM in total, small enough to share elekloader's 128 KB
+  mod RAM with large mods such as digislicer.
 - **CPU:** the per-sample loop has no divides. digihealth's DSP readout
   shows the load on the instrument; see STRING-fast above for a
   measurement.
-- **Coexistence with Sophie:** Sophie hooks the entry of several stock UI
-  routines and returns to the stock code for other machines. STRING hooks
-  a later instruction in the same routines, or redirects their callers,
-  so both hooks run in turn without touching the same bytes.
+- **Coexistence with other mods:** Sophie, digichain and digimono hook
+  the entry (or an early instruction) of several stock UI routines and
+  return to the stock code for other machines. STRING hooks a later
+  instruction in the same routines, or redirects their callers, so the
+  hooks run in turn without touching the same bytes.
 - **Ranges:** STRING cannot change SLICE's ranges and defaults. They come
   from a stock descriptor table shared with the real SLICE machine, and
   changing them safely would mean intercepting a lookup with 31 callers.

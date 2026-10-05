@@ -71,7 +71,7 @@ typedef void (*ks_blit_fn)(void *dst, const void *src, int32_t x, int32_t y,
 
 /* The machine whose SRC page layout was last asked for; glue.s writes it
  * from the two callers of the layout routine. */
-volatile int32_t ks_page_m;
+volatile int32_t digistring_page_m;
 /* Popup text buffer, returned to the firmware like its own. */
 static char ks_txt[12];
 
@@ -79,7 +79,7 @@ static char ks_txt[12];
 static const struct ks_ui_slot *ks_ui_slot(int32_t param)
 {
     uint32_t index = (uint32_t)(param - PARAM_A);
-    if (ks_page_m != KS_MACHINE || index >= SLOTS) return 0;
+    if (digistring_page_m != KS_MACHINE || index >= SLOTS) return 0;
     if (ks_slots[index].kind == UI_STOCK) return 0;
     return &ks_slots[index];
 }
@@ -107,7 +107,7 @@ static char *ks_number(char *out, uint32_t n)
  * @brief Short or long name for a parameter, or 0 for the stock one.
  * @param long_name nonzero for the long (popup/menu) name.
  */
-const char *ks_ui_label(int32_t param, int32_t long_name)
+const char *digistring_ui_label(int32_t param, int32_t long_name)
 {
     const struct ks_ui_slot *slot = ks_ui_slot(param);
     if (!slot) return 0;
@@ -122,28 +122,28 @@ const char *ks_ui_label(int32_t param, int32_t long_name)
  * The LFO page, its popup and its overview index the descriptor table
  * by param * 52 rather than by param.
  */
-const char *ks_ui_lfo_name(int32_t desc_offset, int32_t long_name)
+const char *digistring_ui_lfo_name(int32_t desc_offset, int32_t long_name)
 {
     if (desc_offset < 0) return 0;
-    return ks_ui_label(desc_offset / DESCRIPTOR_SIZE, long_name);
+    return digistring_ui_label(desc_offset / DESCRIPTOR_SIZE, long_name);
 }
 
 /**
  * @brief Group shown before an LFO destination ("STRG" in STRG:Decay)
  * for any of STRING's eight SRC slots, TUNE and SAMP included, or 0.
  */
-const char *ks_ui_lfo_group(int32_t param)
+const char *digistring_ui_lfo_group(int32_t param)
 {
     uint32_t index = (uint32_t)(param - PARAM_A);
-    if (ks_page_m != KS_MACHINE || index >= SLOTS) return 0;
+    if (digistring_page_m != KS_MACHINE || index >= SLOTS) return 0;
     return "STRG";
 }
 
-/** As ks_ui_lfo_group, from a descriptor byte offset. */
-const char *ks_ui_lfo_group_at(int32_t desc_offset)
+/** As digistring_ui_lfo_group, from a descriptor byte offset. */
+const char *digistring_ui_lfo_group_at(int32_t desc_offset)
 {
     if (desc_offset < 0) return 0;
-    return ks_ui_lfo_group(desc_offset / DESCRIPTOR_SIZE);
+    return digistring_ui_lfo_group(desc_offset / DESCRIPTOR_SIZE);
 }
 
 /**
@@ -152,7 +152,7 @@ const char *ks_ui_lfo_group_at(int32_t desc_offset)
  *              passes it to its own formatters.
  * @return out, or 0 to let the stock formatter run.
  */
-char *ks_ui_text(int32_t param, int32_t value, char *out)
+char *digistring_ui_text(int32_t param, int32_t value, char *out)
 {
     const struct ks_ui_slot *slot = ks_ui_slot(param);
     uint32_t n = ((uint32_t)value >> 8) & 0x7fu;
@@ -170,7 +170,7 @@ char *ks_ui_text(int32_t param, int32_t value, char *out)
  * SLICE's own records draw PLAY, SLICE, LEN and GRID in their own ways;
  * STRING's controls borrow BR's plain knob instead, as digisophie does.
  */
-int32_t ks_ui_record(int32_t param)
+int32_t digistring_ui_record(int32_t param)
 {
     return ks_ui_slot(param) ? PARAM_BR : -1;
 }
@@ -179,7 +179,7 @@ int32_t ks_ui_record(int32_t param)
  * @brief The icon drawn instead of a knob, or 0 to draw the knob.
  * @param value the stored value, 0..127 in its high byte.
  */
-const void *ks_ui_icon(int32_t param, int32_t value)
+const void *digistring_ui_icon(int32_t param, int32_t value)
 {
     const struct ks_ui_slot *slot = ks_ui_slot(param);
     if (!slot || slot->kind != UI_EXC) return 0;
@@ -193,10 +193,10 @@ const void *ks_ui_icon(int32_t param, int32_t value)
  *             clears a 17 x 17 box from (x + 1, y) for an inactive knob.
  * @return 1 if drawn (skip the stock knob), 0 otherwise.
  */
-int32_t ks_ui_draw(int32_t param, int32_t value, void *screen,
+int32_t digistring_ui_draw(int32_t param, int32_t value, void *screen,
                    int32_t x, int32_t y)
 {
-    const void *icon = ks_ui_icon(param, value);
+    const void *icon = digistring_ui_icon(param, value);
     if (!icon) return 0;
     KS_BLIT(screen, icon, x + 9, y + 8, 1);
     return 1;
@@ -208,7 +208,7 @@ int32_t ks_ui_draw(int32_t param, int32_t value, void *screen,
  * @param value the stored value, 0..127 in its high byte (the knob routine
  *              gets the raw value, as the value-text routine does).
  */
-int32_t ks_ui_knob(int32_t param, int32_t value)
+int32_t digistring_ui_knob(int32_t param, int32_t value)
 {
     const struct ks_ui_slot *slot = ks_ui_slot(param);
     uint32_t scaled;

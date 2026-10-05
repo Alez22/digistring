@@ -128,7 +128,7 @@ static void ks_zero_block(int32_t *out)
  * buffers go to AMP/filter (site 0x40077fc2), once per 32-frame block.
  * Interrupt level: no firmware calls, static memory only.
  */
-void ks_inject(void)
+void digistring_inject(void)
 {
     uint32_t triggers = TRIG_BITS;
     int32_t track;
@@ -137,16 +137,16 @@ void ks_inject(void)
         struct ks_params params;
         int trigger;
         if (MACH(track) != KS_MACHINE) {
-            ks_voice_stop(v);
+            digistring_voice_stop(v);
             continue;
         }
         trigger = (triggers & (1u << track)) != 0;
-        ks_voice_gate(v, AMP_LEVEL(track), AMP_PHASE(track));
+        digistring_voice_gate(v, AMP_LEVEL(track), AMP_PHASE(track));
         if (!trigger && (!v->active || v->sleeping)) {
             ks_zero_block(TBUF(track));
             continue;
         }
         ks_read_params(track, &params);
-        ks_voice_render(v, &params, trigger, TBUF(track), KS_BLOCK_SIZE);
+        digistring_voice_render(v, &params, trigger, TBUF(track), KS_BLOCK_SIZE);
     }
 }

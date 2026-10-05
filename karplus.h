@@ -5,19 +5,21 @@
 #include <stdint.h>
 
 #define KS_BLOCK_SIZE 32
-/* Delay line length per voice. 2048 int16 samples = 4 KB per track, 32 KB
- * for eight tracks, all static. At 48 kHz the lowest note is ~23.5 Hz
- * (F#0); lower notes run the loop slower (see KS_PERIOD_FLOOR_Q8). */
-#define KS_LINE_SIZE 2048u
+/* Delay line length per voice. 1024 int16 samples = 2 KB per track, 16 KB
+ * for eight tracks, all static. Kept a power of two for KS_LINE_MASK, and
+ * this small so that STRING fits the shared 128 KB mod RAM next to large
+ * mods such as digislicer. At 48 kHz the lowest full-rate note is ~47 Hz
+ * (F#1); lower notes run the loop slower (see KS_PERIOD_FLOOR_Q8). */
+#define KS_LINE_SIZE 1024u
 #define KS_LINE_MASK (KS_LINE_SIZE - 1u)
 /* Longest playable period, leaving room for the filters' own delay
  * (at most about 7 samples with STIFF at maximum). */
-#define KS_PERIOD_MAX_Q8 (2040u << 8)
+#define KS_PERIOD_MAX_Q8 (1016u << 8)
 #define KS_PERIOD_MIN_Q8 (4u << 8)
 /* Longer periods run the loop slower than the output (as Rings does)
- * instead of folding up an octave. Floor: 1/16 of the output rate, so the
- * lowest note is about 1.5 Hz. */
-#define KS_PERIOD_FLOOR_Q8 (KS_PERIOD_MAX_Q8 << 4)
+ * instead of folding up an octave. Floor: 1/32 of the output rate, so the
+ * lowest note is still about 1.5 Hz. */
+#define KS_PERIOD_FLOOR_Q8 (KS_PERIOD_MAX_Q8 << 5)
 #define KS_RATE_FULL 32768 /* loop steps per output sample, Q15 */
 
 /* Excitation types, selected by the EXC control in four zones. */
@@ -70,11 +72,11 @@ struct ks_voice {
     uint8_t fade_left;
 };
 
-void ks_voice_init(struct ks_voice *voice);
-void ks_voice_stop(struct ks_voice *voice);
-void ks_voice_gate(struct ks_voice *voice, int32_t amp_level,
+void digistring_voice_init(struct ks_voice *voice);
+void digistring_voice_stop(struct ks_voice *voice);
+void digistring_voice_gate(struct ks_voice *voice, int32_t amp_level,
                    int32_t amp_phase);
-void ks_voice_render(struct ks_voice *voice, const struct ks_params *params,
+void digistring_voice_render(struct ks_voice *voice, const struct ks_params *params,
                      int trigger, int32_t *output, uint32_t size);
 
 #endif

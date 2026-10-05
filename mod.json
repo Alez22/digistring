@@ -1,6 +1,6 @@
 {
   "id": "digistring",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "license": "MIT",
   "title": "STRING",
   "category": "Synthesis",
@@ -16,88 +16,88 @@
   ],
   "sites": [
     {
-      "addr": "0x40077fc2",
-      "stock": "487980001a18",
+      "addr": "0x40077fb2",
+      "stock": "068700000044",
       "op": "jmp",
-      "target": "ks_inject_s"
+      "target": "digistring_inject_s"
     },
     {
       "addr": "0x400325e8",
       "stock": "4eb9400657cc",
       "op": "keep2",
-      "target": "ks_layout_s"
+      "target": "digistring_layout_s"
     },
     {
       "addr": "0x4003ab02",
       "stock": "47f9400657cc",
       "op": "keep2",
-      "target": "ks_layout_s"
+      "target": "digistring_layout_s"
     },
     {
       "addr": "0x4000fe96",
       "stock": "41f9401a9d9c",
       "op": "jmp",
-      "target": "ks_lab_short_s"
+      "target": "digistring_lab_short_s"
     },
     {
       "addr": "0x4000feb8",
       "stock": "41f9401a9d9c",
       "op": "jmp",
-      "target": "ks_lab_long_s"
+      "target": "digistring_lab_long_s"
     },
     {
       "addr": "0x400657aa",
       "stock": "06804197d2f8",
       "op": "jmp",
-      "target": "ks_ui_rec_s"
+      "target": "digistring_ui_rec_s"
     },
     {
       "addr": "0x4000f33e",
       "stock": "4eb940065794",
       "op": "keep2",
-      "target": "ks_val_text_s"
+      "target": "digistring_val_text_s"
     },
     {
       "addr": "0x4000f2dc",
       "stock": "4eb940065794",
       "op": "keep2",
-      "target": "ks_knob_s"
+      "target": "digistring_knob_s"
     },
     {
       "addr": "0x400657fa",
       "stock": "48794197ce98",
       "op": "jmp",
-      "target": "ks_pop_text_s"
+      "target": "digistring_pop_text_s"
     },
     {
       "addr": "0x40060baa",
       "stock": "4879401d09ca",
       "op": "jmp",
-      "target": "ks_lfo_label_s"
+      "target": "digistring_lfo_label_s"
     },
     {
       "addr": "0x400a437a",
       "stock": "4879401d0051",
       "op": "jmp",
-      "target": "ks_lfo_pop_s"
+      "target": "digistring_lfo_pop_s"
     },
     {
       "addr": "0x400a43f6",
       "stock": "4879401d0051",
       "op": "jmp",
-      "target": "ks_lfo_pop_fb_s"
+      "target": "digistring_lfo_pop_fb_s"
     },
     {
       "addr": "0x40065dec",
       "stock": "4eb94017ac20",
       "op": "keep2",
-      "target": "ks_lfo_ov_group_s"
+      "target": "digistring_lfo_ov_group_s"
     },
     {
-      "addr": "0x40065e68",
-      "stock": "4879401d09ca",
+      "addr": "0x40065e6e",
+      "stock": "4879401c3a62",
       "op": "jmp",
-      "target": "ks_lfo_ov_name_s"
+      "target": "digistring_lfo_ov_name_s"
     }
   ],
   "contribute": [
@@ -109,7 +109,7 @@
         [
           0,
           "abs32",
-          "sym:ks_machine",
+          "sym:digistring_machine",
           0
         ]
       ]

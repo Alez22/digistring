@@ -24,8 +24,8 @@ static void render(struct ks_voice *v, const struct ks_params *p, int trigger,
 {
     unsigned i;
     for (i = 0; i < n; i += KS_BLOCK_SIZE) {
-        ks_voice_gate(v, held ? 1 << 24 : 0, held ? 2 : 0);
-        ks_voice_render(v, p, trigger && i == 0, out + i, KS_BLOCK_SIZE);
+        digistring_voice_gate(v, held ? 1 << 24 : 0, held ? 2 : 0);
+        digistring_voice_render(v, p, trigger && i == 0, out + i, KS_BLOCK_SIZE);
     }
 }
 
@@ -97,7 +97,7 @@ static void test_tuning(void)
             struct ks_params p = params_for(notes[i]);
             double hz, error;
             p.tone = tones[j];
-            ks_voice_init(&v);
+            digistring_voice_init(&v);
             render(&v, &p, 1, 1, buf_a, 16384);
             hz = measure_hz(buf_a + 8192, notes[i]);
             error = cents(hz, notes[i]);
@@ -120,7 +120,7 @@ static void test_stiff_tuning(void)
         struct ks_params p = params_for(notes[i]);
         double error;
         p.stiff = 127;
-        ks_voice_init(&v);
+        digistring_voice_init(&v);
         render(&v, &p, 1, 1, buf_a, 16384);
         error = cents(measure_hz(buf_a + 8192, notes[i]), notes[i]);
         printf("stiff 127 %6.1f Hz: %+.2f cents\n", notes[i], error);
@@ -132,14 +132,14 @@ static void test_stiff_tuning(void)
  * an octave; the window is long enough to tell them from their octave. */
 static void test_low_notes(void)
 {
-    static const double notes[] = { 24.5, 20.0, 15.0, 10.0 };
+    static const double notes[] = { 44.0, 30.0, 24.5, 20.0, 15.0, 10.0 };
     unsigned i;
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < sizeof notes / sizeof notes[0]; ++i) {
         struct ks_voice v;
         struct ks_params p = params_for(notes[i]);
         double hz;
         p.decay = 127;
-        ks_voice_init(&v);
+        digistring_voice_init(&v);
         render(&v, &p, 1, 1, buf_a, N);
         hz = measure_hz_over(buf_a + 8192, notes[i], 32768);
         printf("%5.1f Hz plays %.2f Hz\n", notes[i], hz);
@@ -176,7 +176,7 @@ static void test_decay_is_t60(void)
             double slope, t60;
             p.decay = decays[j];
             p.tone = 4; /* no loop lowpass */
-            ks_voice_init(&v);
+            digistring_voice_init(&v);
             render(&v, &p, 1, 1, buf_a, N);
             slope = (level_db(buf_a + 4800, 4800)
                      - level_db(buf_a + 19200, 4800)) / 0.3;
@@ -219,7 +219,7 @@ static void test_tone_tracks_the_note(void)
             struct ks_params p = params_for(notes[i]);
             p.tone = (uint8_t)tone;
             p.decay = 90;
-            ks_voice_init(&v);
+            digistring_voice_init(&v);
             render(&v, &p, 1, 1, buf_a, start + 8192);
             c[i][tone] = centroid(buf_a + start, notes[i]);
             printf("tone %u at %3.0f Hz: centroid %.2f harmonics\n",
@@ -242,7 +242,7 @@ static void test_tone_keeps_decay(void)
     double t60;
     p.decay = 70;
     p.tone = 0;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, N);
     t60 = 60.0 / ((level_db(buf_a + 4800, 4800)
                    - level_db(buf_a + 19200, 4800)) / 0.3);
@@ -258,7 +258,7 @@ static void render_scenario(int32_t *out)
 {
     struct ks_voice v;
     struct ks_params high = params_for(330.0), low = params_for(12.0);
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &high, 1, 1, out, 9600);
     render(&v, &low, 1, 1, out + 9600, 9600);
     render(&v, &high, 1, 1, out + 19200, 9600);
@@ -287,8 +287,8 @@ static void test_deterministic_and_bounded(void)
     struct ks_params p = params_for(220.0);
     unsigned i;
     p.decay = 127; p.tone = 4; p.stiff = 127; p.pos = 0;
-    ks_voice_init(&va);
-    ks_voice_init(&vb);
+    digistring_voice_init(&va);
+    digistring_voice_init(&vb);
     render(&va, &p, 1, 1, buf_a, N);
     render(&vb, &p, 1, 1, buf_b, N);
     assert(!memcmp(buf_a, buf_b, sizeof buf_a));
@@ -304,11 +304,11 @@ static void test_decay_control(void)
     struct ks_params p = params_for(220.0);
     uint64_t short_tail, long_tail;
     p.decay = 0;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, N);
     short_tail = energy(buf_a + 24000, 12000);
     p.decay = 127;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, N);
     long_tail = energy(buf_a + 24000, 12000);
     printf("tail energy: decay 0 %llu, decay 127 %llu\n",
@@ -327,7 +327,7 @@ static void test_every_exciter_sounds(void)
         p.exciter = (uint8_t)exciter;
         p.pos = 40;
         p.bright = 80;
-        ks_voice_init(&v);
+        digistring_voice_init(&v);
         render(&v, &p, 1, 1, buf_a, 12000);
         e = energy(buf_a, 12000);
         printf("exciter %u energy %llu\n", exciter, (unsigned long long)e);
@@ -345,8 +345,8 @@ static void test_controls_change_sound(void)
         if (offsets[k] == 1) pb.pos = 64;
         if (offsets[k] == 2) pb.stiff = 127;
         if (offsets[k] == 3) pb.bright = 10;
-        ks_voice_init(&va);
-        ks_voice_init(&vb);
+        digistring_voice_init(&va);
+        digistring_voice_init(&vb);
         render(&va, &pa, 1, 1, buf_a, 4800);
         render(&vb, &pb, 1, 1, buf_b, 4800);
         assert(memcmp(buf_a, buf_b, 4800 * sizeof buf_a[0]));
@@ -359,7 +359,7 @@ static void test_release_sleeps(void)
     struct ks_params p = params_for(220.0);
     unsigned i;
     p.decay = 127;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, 4800);
     /* AMP released: 32 quiet blocks, then a 128-sample fade. */
     render(&v, &p, 0, 0, buf_a, 32 * 40);
@@ -377,7 +377,7 @@ static void test_decayed_string_sleeps_while_held(void)
     struct ks_params p = params_for(880.0);
     p.decay = 0;
     p.tone = 0;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, N);
     assert(v.sleeping);
 }
@@ -388,7 +388,7 @@ static void test_bow_sustains_until_release(void)
     struct ks_params p = params_for(220.0);
     p.exciter = KS_EXC_BOW;
     p.decay = 60;
-    ks_voice_init(&v);
+    digistring_voice_init(&v);
     render(&v, &p, 1, 1, buf_a, N);
     assert(energy(buf_a + 36000, 12000) > 50000);
     render(&v, &p, 0, 0, buf_a, N);
@@ -401,14 +401,14 @@ static void test_retrigger_adds_to_ringing_string(void)
     struct ks_params p = params_for(220.0);
     p.decay = 127;
     p.exciter = KS_EXC_PLUCK;
-    ks_voice_init(&va);
-    ks_voice_init(&vb);
+    digistring_voice_init(&va);
+    digistring_voice_init(&vb);
     render(&va, &p, 1, 1, buf_a, 4800);
     render(&vb, &p, 1, 1, buf_b, 4800);
     /* Retrigger one voice: it must differ from a fresh pluck, because the
      * old vibration is kept and the excitation adds to it. */
     render(&va, &p, 1, 1, buf_a, 4800);
-    ks_voice_init(&vb);
+    digistring_voice_init(&vb);
     render(&vb, &p, 1, 1, buf_b, 4800);
     assert(memcmp(buf_a, buf_b, 4800 * sizeof buf_a[0]));
 }
