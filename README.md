@@ -1,28 +1,31 @@
 # STRING for Digitakt
 
 STRING is a Karplus-Strong plucked string SRC machine for the original
-Digitakt (Mk1), OS 1.53. It is an [elekloader](https://github.com/irpina/elekloader)
+Digitakt (Mk1), OS 1.53 and 1.54. It is an [elekloader](https://github.com/irpina/elekloader)
 mod: a new machine in the SRC menu whose audio goes through the Digitakt's
 regular AMP, filter, mixer and effects path, like any stock machine.
 
 **Website, with a demo you can listen to:**
 [alez22.github.io/digistring](https://alez22.github.io/digistring/)
 
-Get the current `.elemod` and release notes from the
-[v0.7.0 release](https://github.com/Alez22/digistring/releases/tag/v0.7.0).
+Get the current `.elemod` files and release notes from the
+[v0.8.0 release](https://github.com/Alez22/digistring/releases/tag/v0.8.0).
 
-It works on its own and alongside
-[Sophie for Digitakt](https://github.com/soejrd/digisophie): the two mods
-patch different bytes and can be installed together. elekloader's lint
-also links it with every other Digitakt mod in its shop: digislicer,
-digineighbor, digichain, digimono, digipoly, digihealth, digieq,
-digimatrix and digiutils (some of those cannot be combined with one
-another, independently of STRING).
+It works on its own and alongside the other Digitakt mods: it patches
+different bytes from them and can be installed with any of them.
+elekloader's lint links it with
+[Sophie for Digitakt](https://github.com/soejrd/digisophie) and with every
+Digitakt mod in elekloader's shop: digislicer, digineighbor, digichain,
+digimono, digipoly, digihealth, digieq, digimatrix and digiutils. Some of
+those cannot be combined with one another, independently of STRING. On a
+Digitakt running OS 1.54, these sets played together: digihealth with
+digichain, digimono and digipoly; digihealth with digineighbor (NEIGHBOR
+can take a STRING track's sound); digihealth with digislicer.
 
 ---
 
 **USE AT YOUR OWN RISK.** This modifies your instrument's firmware. Back up
-your projects and sounds, and keep a stock OS 1.53 file for recovery.
+your projects and sounds, and keep your stock OS file for recovery.
 
 ---
 
@@ -69,16 +72,20 @@ give a sensible new sound.
 
 ## Install: no compiler required
 
-You need only the prebuilt
-[STRING mod](release/digistring-0.7.0.elemod),
+You need only the prebuilt STRING mod for your OS,
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
-own stock Digitakt Mk1 OS 1.53 `.syx`. You do not need ColdFire tools,
-Python or a source checkout.
+own stock Digitakt Mk1 `.syx`. You do not need ColdFire tools, Python or a
+source checkout.
+
+| Your OS | STRING | STRING-fast (below) |
+| --- | --- | --- |
+| 1.53 | [digistring-0.8.0.elemod](release/digistring-0.8.0.elemod) | [digistring-fast-0.8.0.elemod](release/digistring-fast-0.8.0.elemod) |
+| 1.54 | [digistring-0.8.0-os1.54.elemod](release/digistring-0.8.0-os1.54.elemod) | [digistring-fast-0.8.0-os1.54.elemod](release/digistring-fast-0.8.0-os1.54.elemod) |
 
 1. In elekloader, select your stock OS with **Change stock firmware**.
-2. Choose **Install from file** and select `digistring-0.7.0.elemod`. Enable STRING;
-   core 2.1 must be enabled with it. Sophie and digihealth can be enabled
-   too.
+2. Choose **Install from file** and select the `.elemod` for your OS.
+   Enable STRING; core 2.1 must be enabled with it. Other mods can be
+   enabled too.
 3. Set the four-character OS version, then choose **Build Firmware** and
    save the generated `.syx`.
 4. Send that `.syx` to the Digitakt with Elektron Transfer. Do not power
@@ -89,13 +96,13 @@ Neither the stock nor the modified OS file belongs in this repository.
 
 ## STRING-fast: more tracks with FAST AUDIO
 
-[STRING-fast](release/digistring-fast-0.7.0.elemod) is the same machine,
+STRING-fast is the same machine,
 same sound and controls, for people who also run **digihealth**. While
 digihealth's **FAST AUDIO** is on, STRING's per-sample loop runs from the
 Digitakt's fast on-chip memory; when it is off, STRING runs as usual.
 
 On one Digitakt, five STRING tracks played without crackles at about 95%
-DSP load with FAST AUDIO on, and went over 100% with it off.
+DSP load with FAST AUDIO on, on OS 1.53 and on 1.54.
 
 - Install **either** STRING **or** STRING-fast, not both: elekloader
   refuses the pair.
@@ -110,8 +117,8 @@ DSP load with FAST AUDIO on, and went over 100% with it off.
   digihealth checks the copies and falls back if anything overwrites
   them. Treat it, like the rest, as use at your own risk.
 
-Install it as above, choosing `digistring-fast-0.7.0.elemod` and also
-enabling digihealth.
+Install it as above, choosing the STRING-fast `.elemod` for your OS (see
+the table) and also enabling digihealth.
 
 ## Build from source (developers only)
 

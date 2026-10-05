@@ -15,10 +15,10 @@
     <div class="logo"><svg class="px" viewBox="0 0 11 7" role="img" aria-label="menu" shape-rendering="crispEdges"><rect x="3" y="1" width="5" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="8" y="2" width="2" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="1" y="4" width="2" height="1"/><rect x="8" y="4" width="2" height="1"/><rect x="3" y="5" width="5" height="1"/></svg></div>
     <h1>STRING</h1>
     <p class="tagline">A Karplus-Strong plucked string machine for the original Digitakt.</p>
-    <p class="sub">A new SRC machine for Digitakt Mk1, OS&nbsp;1.53. Its sound goes through the
+    <p class="sub">A new SRC machine for Digitakt Mk1, OS&nbsp;1.53 and&nbsp;1.54. Its sound goes through the
       Digitakt's own AMP, filter, mixer and effects, like any stock machine.</p>
     <div class="actions">
-      <a class="btn primary" href="https://github.com/Alez22/digistring/releases/tag/v0.7.0">Download v0.7.0</a>
+      <a class="btn primary" href="https://github.com/Alez22/digistring/releases/tag/v0.8.0">Download v0.8.0</a>
       <a class="btn" href="https://github.com/Alez22/digistring">Source on GitHub</a>
     </div>
   </div>
@@ -79,8 +79,9 @@
         instead, down to about 1.5&nbsp;Hz.</li>
       <li>Decay, tone and the low-note design follow the String model of
         <a href="https://github.com/pichenettes/eurorack/tree/master/rings">Mutable Instruments Rings</a>.</li>
-      <li><strong>Works alongside <a href="https://github.com/soejrd/digisophie">Sophie</a></strong>,
-        or on its own.</li>
+      <li><strong>Works alongside the other Digitakt mods</strong>:
+        <a href="https://github.com/soejrd/digisophie">Sophie</a>, digislicer, digineighbor,
+        digichain, digimono, digipoly, digihealth and more, or on its own.</li>
     </ul>
   </section>
 
@@ -88,10 +89,11 @@
     <h2>Install</h2>
     <p>No compiler needed. You need
       <a href="https://github.com/irpina/elekloader/releases/latest">elekloader</a>,
-      your own stock Digitakt Mk1 OS&nbsp;1.53 file and the STRING mod.</p>
+      your own stock Digitakt Mk1 OS&nbsp;1.53 or 1.54 file and the STRING mod for it.</p>
     <ol class="steps">
-      <li>Download <code>digistring-0.7.0.elemod</code> from the
-        <a href="https://github.com/Alez22/digistring/releases/tag/v0.7.0">release</a>.</li>
+      <li>Download <code>digistring-0.8.0.elemod</code> (OS&nbsp;1.53) or
+        <code>digistring-0.8.0-os1.54.elemod</code> (OS&nbsp;1.54) from the
+        <a href="https://github.com/Alez22/digistring/releases/tag/v0.8.0">release</a>.</li>
       <li>In elekloader, select your stock OS with <em>Change stock firmware</em>.</li>
       <li><em>Install from file</em>, enable STRING (and core 2.1), then <em>Build Firmware</em>.</li>
       <li>Send the generated <code>.syx</code> to the Digitakt with Elektron Transfer.</li>
@@ -99,9 +101,8 @@
     <h3>STRING-fast</h3>
     <p>For more tracks: the same machine, whose sample loop runs from the Digitakt's fast
       on-chip memory while <strong>digihealth</strong>'s FAST AUDIO is on. On one Digitakt,
-      five STRING tracks played cleanly at about 95% DSP load with FAST AUDIO on, and went
-      over 100% with it off.</p>
-    <p>Install <code>digistring-fast-0.7.0.elemod</code> instead of STRING (not both) and
+      five STRING tracks played cleanly at about 95% DSP load with FAST AUDIO on.</p>
+    <p>Install <code>digistring-fast-0.8.0.elemod</code> (or <code>-os1.54</code>) instead of STRING (not both) and
       enable digihealth, from
       <a href="https://github.com/soejrd/digisophie/blob/main/release/digihealth-1.0.1.elemod">Sophie's repository</a>
       (switch on SETTINGS &gt; FAST AUDIO) or from
