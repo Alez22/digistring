@@ -211,6 +211,6 @@ and the slower loop for very low notes follow the String model of
 [Mutable Instruments Rings](https://github.com/pichenettes/eurorack/tree/master/rings)
 by Emilie Gillet (MIT), rewritten in fixed point. The Digitakt RAM addresses, the pitch lookup and
 the SRC page hooking approach come from
-[Sophie for Digitakt](https://github.com/soejrd/digisophie) (MIT), and the
+[Sophie for Digitakt](https://github.com/soejrd/digisophie) by soejrd (MIT), and the
 machine slots from elekloader's core mod. STRING is independent of, and
 not endorsed by, Elektron. It contains no Elektron firmware or samples.

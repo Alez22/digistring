@@ -13,8 +13,10 @@
 #define TRACKS 8
 /* Track source buffer: 32 samples, 16.16, read by the stock AMP/filter. */
 #define TBUF(t) ((int32_t *)(unsigned long)(0x80001a18u + 128u * (uint32_t)(t)))
-/* Each track's render machine, as core 2.1 writes it. */
-#define MACH(t) (*(volatile const uint8_t *)(unsigned long)(0x800018bcu + (uint32_t)(t)))
+/* Each track's render machine: core 2.1's export, so no firmware address
+ * is hardcoded here. */
+extern volatile uint8_t core_track_machine[TRACKS];
+#define MACH(t) (core_track_machine[(t)])
 /* Sound parameter block: one int16 per SRC slot, value in the high byte. */
 #define VP(t, o) (*(volatile const int16_t *)(unsigned long)(0x80002794u + 106u * (uint32_t)(t) + (uint32_t)(o)))
 #define NOTE(t) (*(volatile const int32_t *)(unsigned long)(0x80001f28u + 4u * (uint32_t)(t)))
