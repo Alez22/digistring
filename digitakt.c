@@ -11,8 +11,6 @@
 
 #define KS_MACHINE 8
 #define TRACKS 8
-/* Track source buffer: 32 samples, 16.16, read by the stock AMP/filter. */
-#define TBUF(t) ((int32_t *)(unsigned long)(0x80001a18u + 128u * (uint32_t)(t)))
 /* Each track's render machine: core 2.1's export, so no firmware address
  * is hardcoded here. */
 extern volatile uint8_t core_track_machine[TRACKS];
@@ -35,18 +33,19 @@ extern volatile uint8_t core_track_machine[TRACKS];
 #define AMP_PHASE(t) (*(volatile const int32_t *)(unsigned long)(AMP_PHASE_AT + 12u * (uint32_t)(t)))
 #define PITCH_TAB ((const uint32_t *)(unsigned long)PITCH_TAB_AT)
 
-/* SRC slots A..H (byte offsets into VP). The machine borrows SLICE's
- * parameters (core descriptor `params` = 3), so it keeps SLICE's ranges and
- * defaults; ui.c only renames and redraws them. Controls are placed so that
- * SLICE's defaults give a sensible new sound:
+/* SRC slots A..H (byte offsets into VP). The machine stores its values in
+ * SLICE's parameter slots (core descriptor `params` = 3); ui.c's page gives
+ * them STRING's own ranges and defaults through machine-pages:
  *   A TUNE  stock              -> pitch
  *   B EXC   0..3,   def 3      -> BOW / HIT / NOISE / PLUCK (default PLUCK)
  *   C STIFF 0..127, def 0      -> dispersion (default: an ideal string)
- *   D SAMP                     -> unused, stock sample selector
+ *   D SAMP  hidden             -> unused
  *   E POS   0..64,  def 0      -> pluck position comb (default: off)
- *   F SOFT  0..63,  def 0      -> darker excitation (default: bright)
+ *   F SOFT  0..127, def 0      -> darker excitation (default: bright)
  *   G TONE  0..4,   def 0      -> loop lowpass: 0 warm .. 3 bright, 4 open
- *   H DECAY 0..127, def 100    -> T60, 0.07 s .. ~17 s, then endless */
+ *   H DECAY 0..127, def 100    -> T60, 0.07 s .. ~17 s, then endless
+ * The engine still clamps every value, so a value from an older project
+ * or from MIDI can never leave the engine's range. */
 #define P_TUNE 0
 #define P_EXC 2
 #define P_STIFF 4
@@ -112,7 +111,7 @@ static uint32_t ks_track_period_q8(int32_t track)
 
 static void ks_read_params(int32_t track, struct ks_params *p)
 {
-    /* EXC values in UI order, so SLICE's PLAY default (3) is PLUCK. */
+    /* EXC values in UI order: BOW, HIT, NOISE, PLUCK. */
     static const uint8_t exciters[4] = {
         KS_EXC_BOW, KS_EXC_MALLET, KS_EXC_NOISE, KS_EXC_PLUCK
     };
@@ -123,7 +122,7 @@ static void ks_read_params(int32_t track, struct ks_params *p)
     p->exciter = exciters[ks_u7(track, P_EXC) & 3u];
     p->stiff = (uint8_t)ks_u7(track, P_STIFF);
     p->pos = (uint8_t)(pos > 127u ? 127u : pos);
-    p->bright = (uint8_t)(127u - (soft * 2u + (soft >= 63u)));
+    p->bright = (uint8_t)(127u - soft);
     p->tone = (uint8_t)(tone > 4u ? 4u : tone);
     p->decay = (uint8_t)ks_u7(track, P_DECAY);
     p->velocity = (uint8_t)(((uint32_t)(uint16_t)VEL(track) >> 8) & 0x7fu);
@@ -136,17 +135,21 @@ static void ks_zero_block(int32_t *out)
 }
 
 /**
- * @brief Render every STRING track into its source buffer.
- * Called from the render after the stock source voices and before the
- * buffers go to AMP/filter (site 0x40077fb2), once per 32-frame block.
- * Interrupt level: no firmware calls, static memory only.
+ * @brief Render every STRING track into its block.
+ * machine-pages' ev_render_voices handler (order 20: a machine that makes
+ * a track's sound), called once per 32-frame block after the stock
+ * playback and before AMP/filter. Interrupt level: no firmware calls,
+ * static memory only.
+ * @param blocks every track's block: 32 samples a track, the format the
+ *               stock playback leaves there.
  */
-void digistring_inject(void)
+void digistring_render(int32_t *blocks)
 {
     uint32_t triggers = TRIG_BITS;
     int32_t track;
     for (track = 0; track < TRACKS; ++track) {
         struct ks_voice *v = &ks_voices[track];
+        int32_t *block = blocks + KS_BLOCK_SIZE * track;
         struct ks_params params;
         int trigger;
         if (MACH(track) != KS_MACHINE) {
@@ -156,10 +159,10 @@ void digistring_inject(void)
         trigger = (triggers & (1u << track)) != 0;
         digistring_voice_gate(v, AMP_LEVEL(track), AMP_PHASE(track));
         if (!trigger && (!v->active || v->sleeping)) {
-            ks_zero_block(TBUF(track));
+            ks_zero_block(block);
             continue;
         }
         ks_read_params(track, &params);
-        digistring_voice_render(v, &params, trigger, TBUF(track), KS_BLOCK_SIZE);
+        digistring_voice_render(v, &params, trigger, block, KS_BLOCK_SIZE);
     }
 }

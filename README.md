@@ -11,16 +11,13 @@ regular AMP, filter, mixer and effects path, like any stock machine.
 Get the current `.elemod` files and release notes from the
 [v0.8.0 release](https://github.com/Alez22/digistring/releases/tag/v0.8.0).
 
-It works on its own and alongside the other Digitakt mods: it patches
-different bytes from them and can be installed with any of them.
-elekloader's lint links it with
-[Sophie for Digitakt](https://github.com/soejrd/digisophie) and with every
-Digitakt mod in elekloader's shop: digislicer, digineighbor, digichain,
-digimono, digipoly, digihealth, digieq, digimatrix and digiutils. Some of
-those cannot be combined with one another, independently of STRING. On a
-Digitakt running OS 1.54, these sets played together: digihealth with
-digichain, digimono and digipoly; digihealth with digineighbor (NEIGHBOR
-can take a STRING track's sound); digihealth with digislicer.
+From 0.9.0 STRING is built on **machine-pages**, the shared framework
+that draws the SRC and LFO pages of added machines and gives them a place
+in the render. STRING patches no firmware bytes itself, so it combines
+with the other machines built on machine-pages, such as RAM Machines.
+machine-pages, and so STRING 0.9.0, cannot be installed with digichain,
+which owns the same places; digimono and digipoly need digichain. Use
+STRING 0.8.0 if you need those.
 
 ---
 
@@ -31,19 +28,18 @@ your projects and sounds, and keep your stock OS file for recovery.
 
 ## Controls
 
-STRING borrows SLICE's eight parameter slots, so its values are saved,
-p-lockable and reachable by MIDI CC/NRPN like any stock parameter. It keeps
-SLICE's ranges and defaults; the controls are placed so that those defaults
-give a sensible new sound.
+STRING stores its values in SLICE's eight parameter slots, so they are
+saved, p-lockable and reachable by MIDI CC/NRPN like any stock parameter.
+Each control has STRING's own range and default.
 
 | SRC knob | Control | Range | Default | What it does |
 | --- | --- | --- | --- | --- |
 | A | TUNE | stock | 0 | Pitch |
 | B | EXC | 4 icons | PLUCK | Exciter: BOW, HIT (mallet), NOISE, PLUCK |
 | C | STIFF | 0–127 | 0 | Stiffness: from an ideal string to a bell-like, inharmonic tone |
-| D | SAMP | stock | – | Stock sample selector; STRING does not use the sample |
+| D | – | – | – | Blank: STRING plays no sample |
 | E | POS | OFF, 1–64 | OFF | Pluck position, from the bridge to the middle of the string |
-| F | SOFT | 0–63 | 0 | Darker, softer attack |
+| F | SOFT | 0–127 | 0 | Darker, softer attack |
 | G | TONE | 0–4 | 0 | Damping inside the string: 0 warm, 3 bright, 4 open and metallic |
 | H | DECAY | 0–127 | 100 | How long the string itself rings: 0.07 s to about 17 s, endless at the top |
 
@@ -142,18 +138,21 @@ the elekloader checkout:
 ```sh
 STOCK=/path/to/Digitakt_OS1.53.syx
 python3 -m elekloader.sdk.build mods/core --stock $STOCK
+python3 -m elekloader.sdk.build mods/machine-pages --stock $STOCK
 python3 -m elekloader.sdk.build /path/to/digistring --stock $STOCK
-python3 -m elekloader.lint /path/to/digistring/out/digistring-0.8.0.elemod \
-    --stock $STOCK --with mods/core/out/core-2.1.elemod
+# The .elemod files the three builds wrote:
+CORE=mods/core/out/core-<version>.elemod
+PAGES=mods/machine-pages/out/machine-pages-<version>.elemod
+STRING=/path/to/digistring/out/digistring-0.9.0.elemod
+python3 -m elekloader.lint $STRING --stock $STOCK --with $CORE --with $PAGES
 python3 -m elekloader.patch --stock $STOCK \
-    --mod mods/core/out/core-2.1.elemod \
-    --mod /path/to/digistring/out/digistring-0.8.0.elemod \
+    --mod $CORE --mod $PAGES --mod $STRING \
     --out Digitakt_OS1.53_STRING.syx --version K005
 ```
 
-For OS 1.54, build from the 1.54 stock file: the SDK picks `mod.json`'s
-1.54 port and writes `digistring-0.8.0-os1.54.elemod`; use core's
-`core-2.1-os1.54.elemod` with it.
+For OS 1.54, build from the 1.54 stock file: the SDK picks each
+`mod.json`'s 1.54 port and writes `-os1.54` files, such as
+`digistring-0.9.0-os1.54.elemod`; use those together.
 
 Add `--mod` lines (and the same files as `--with` to `lint`) for Sophie,
 digihealth or any other mod to build them into the same firmware; lint
@@ -167,42 +166,36 @@ exits 0 only when the whole set links. STRING-fast is built from
 | --- | --- |
 | `karplus.c` | Fixed-point Karplus-Strong engine at 48 kHz: delay line, fractional allpass tuning, note-tracking lowpass, stiffness allpasses, T60 decay, exciters, sleep |
 | `digitakt.c` | OS 1.53/1.54 adapter: reads pitch, controls, triggers and AMP state, renders each STRING track into its source buffer |
-| `ui.c` | SRC page names, value texts, knob scaling, EXC icons and LFO names |
+| `ui.c` | Machine descriptor, menu icon and the SRC page machine-pages draws: names, ranges, defaults, value texts, EXC icons, LFO group |
+| `cm_ui.h` | The machine-pages page layout STRING uses (MIT) |
 | `ks_loop.inc` | The per-sample loop; STRING-fast compiles it a second time into `.fast` |
-| `glue.s` | Machine descriptor, menu icon and the assembly stubs at the patch sites |
 | `variants/fast/` | STRING-fast's manifest: same sources, `-DKS_FAST`, needs digihealth |
 | `scripts/gen_tables.py` | Generates `ks_tables.inc` (allpass coefficients) |
 | `scripts/gen_icons.py` | Generates `ks_icons.inc` from ASCII-art icons |
 
-- **Audio:** the render is hooked at `0x40077fb2`, right after the stock
-  source voices and before the buffers reach AMP and filter; the
-  following instructions are other mods' render hooks. Each STRING
-  track gets 32 samples per block.
+- **Audio:** STRING renders from machine-pages' `ev_render_voices`
+  event (order 20), right after the stock playback and before the
+  buffers reach AMP and filter. Each STRING track gets 32 samples per
+  block.
 - **Memory:** each track's delay line is 2 KB, all statically allocated:
   about 17 KB of RAM in total, small enough to share elekloader's 128 KB
   mod RAM with large mods such as digislicer.
 - **CPU:** the per-sample loop has no divides. digihealth's DSP readout
   shows the load on the instrument; see STRING-fast above for a
   measurement.
-- **Coexistence with other mods:** Sophie, digichain and digimono hook
-  the entry (or an early instruction) of several stock UI routines and
-  return to the stock code for other machines. STRING hooks a later
-  instruction in the same routines, or redirects their callers, so the
-  hooks run in turn without touching the same bytes.
-- **Ranges:** STRING cannot change SLICE's ranges and defaults. They come
-  from a stock descriptor table shared with the real SLICE machine, and
-  changing them safely would mean intercepting a lookup with 31 callers.
+- **Pages and ranges:** machine-pages owns the SRC page, LFO page and
+  range lookups once, and answers them from the `cm_ui` page that
+  STRING's descriptor points to. The engine still clamps every value
+  itself.
 
 To change the EXC icons, edit the ASCII art in `scripts/gen_icons.py` and
 run `python3 scripts/gen_icons.py > ks_icons.inc`.
 
-All addresses are for Digitakt Mk1 OS 1.53 and 1.54. Most of 1.54 only
-moved: 16 of STRING's firmware addresses differ there (the RAM past the
-image by 0x1000, some code and strings by a few hundred bytes), and every
-site's stock instruction is the same as 1.53's but for those addresses.
-`mod.json`'s `ports` holds the 1.54 sites and builds the sources with
-`-DDIGISTRING_OS154` (C) and `--defsym OS154=1` (`glue.s`), which pick the
-moved addresses; the 1.53 build is unchanged.
+All addresses are for Digitakt Mk1 OS 1.53 and 1.54. Five of STRING's
+firmware addresses differ in 1.54 (the AMP state, the pitch table, the
+Bitmap vtable and the blit routine). `mod.json`'s 1.54 port builds the
+sources with `-DDIGISTRING_OS154`, which picks them; the 1.53 build is
+unchanged.
 
 ## Credits and license
 

@@ -1,78 +1,81 @@
 /* SPDX-License-Identifier: MIT */
-/* Host tests for ui.c: STRING answers only on its own page and slots. */
+/* Host tests for ui.c: STRING's page as machine-pages reads it. */
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "cm_ui.h"
 
-extern volatile int32_t digistring_page_m;
-const char *digistring_ui_label(int32_t param, int32_t long_name);
-char *digistring_ui_text(int32_t param, int32_t value, char *out);
-int32_t digistring_ui_record(int32_t param);
-int32_t digistring_ui_knob(int32_t param, int32_t value);
-const void *digistring_ui_icon(int32_t param, int32_t value);
-const char *digistring_ui_lfo_name(int32_t desc_offset, int32_t long_name);
-const char *digistring_ui_lfo_group(int32_t param);
-const char *digistring_ui_lfo_group_at(int32_t desc_offset);
+/* machine-pages exports the marker; the host test stands in for it. */
+const char cm_ui_v31[] = "machine-pages 3.1";
+
+extern const struct cm_machine digistring_machine;
+int32_t digistring_fmt_number(char *buf, int32_t value, int32_t ctx, int32_t machine);
+int32_t digistring_fmt_pos(char *buf, int32_t value, int32_t ctx, int32_t machine);
+int32_t digistring_fmt_exc(char *buf, int32_t value, int32_t ctx, int32_t machine);
+int32_t digistring_gfx_pos(int32_t value);
+int32_t digistring_gfx_tone(int32_t value);
+
+#define V(n) ((int32_t)(n) << 8)
+
+/** Check a knob's name, range and default. */
+static void check_knob(int k, const char *name, int32_t max, int32_t def)
+{
+    const struct cm_knob *knob = &digistring_machine.ui->knob[k];
+    assert(!strcmp(knob->name, name));
+    assert(knob->look == 0x86);
+    assert(knob->flags & CM_RANGE);
+    assert(knob->flags & CM_DEFAULT);
+    assert(knob->min == 0 && knob->max == V(max) && knob->def == V(def));
+    assert(knob->fmt);
+}
 
 int main(void)
 {
-    char out[12];
-    digistring_page_m = 7; /* digisophie's page: never ours */
-    assert(!digistring_ui_label(0x8b, 0));
-    assert(!digistring_ui_text(0x85, 3 << 8, out));
-    assert(digistring_ui_record(0x85) == -1);
-    assert(digistring_ui_knob(0x85, 3 << 8) == 3 << 8);
+    const struct cm_ui *page = digistring_machine.ui;
+    char out[16];
 
-    digistring_page_m = 8;
-    assert(!digistring_ui_label(0x84, 0));          /* TUNE stays stock */
-    assert(!digistring_ui_label(0x87, 1));          /* SAMP stays stock */
-    assert(!digistring_ui_label(0x83, 0));          /* not an SRC slot */
-    assert(!digistring_ui_label(0x8c, 0));
-    assert(!strcmp(digistring_ui_label(0x85, 0), "EXC"));
-    assert(!strcmp(digistring_ui_label(0x8b, 0), "DECAY"));
-    assert(!strcmp(digistring_ui_label(0x8b, 1), "Decay"));
-    assert(!strcmp(digistring_ui_text(0x85, 3 << 8, out), "PLUCK"));
-    assert(!strcmp(digistring_ui_text(0x85, 0, out), "BOW"));
-    assert(!strcmp(digistring_ui_text(0x88, 0, out), "OFF"));
-    assert(!strcmp(digistring_ui_text(0x88, 64 << 8, out), "64"));
-    assert(!strcmp(digistring_ui_text(0x8b, 127 << 8, out), "127"));
-    assert(!strcmp(digistring_ui_text(0x8b, 100 << 8, out), "100"));
-    assert(!strcmp(digistring_ui_text(0x86, 7 << 8, 0), "7")); /* popup buffer */
-    assert(digistring_ui_record(0x8a) == 0x86);
-    assert(digistring_ui_record(0x84) == -1);
-    /* Raw values, 0..127 in the high byte, as the knob routine gets them. */
-    assert(digistring_ui_knob(0x85, 3 << 8) == 126 << 8);
-    assert(digistring_ui_knob(0x85, 1 << 8) == 42 << 8);
-    assert(digistring_ui_knob(0x86, 77 << 8) == 77 << 8);  /* STIFF: unchanged */
-    assert(digistring_ui_knob(0x88, 64 << 8) == 127 << 8);
-    assert(digistring_ui_knob(0x89, 63 << 8) == 126 << 8);
-    assert(digistring_ui_knob(0x8a, 2 << 8) == 64 << 8);
-    assert(digistring_ui_knob(0x8a, 4 << 8) == 127 << 8);
-    assert(digistring_ui_knob(0x8b, 100 << 8) == 100 << 8);
-    assert(digistring_ui_knob(0x84, 0x4000) == 0x4000);    /* TUNE: stock */
+    /* The descriptor: machine 8 on SLICE's slots, with a page. */
+    assert(digistring_machine.id == 8);
+    assert(!strcmp(digistring_machine.name, "STRING"));
+    assert(digistring_machine.params == 3 && digistring_machine.render == 8);
+    assert(digistring_machine.tag == CM_UI_TAG);
+    assert(page->abi == cm_ui_v31 && page->page_from == 3);
+    assert(!strcmp(page->group, "STRG"));
+    assert(!page->on_switch);
 
-    /* EXC draws one of four icons; every other control keeps its knob. */
-    assert(digistring_ui_icon(0x85, 0) && digistring_ui_icon(0x85, 3 << 8));
-    assert(digistring_ui_icon(0x85, 0) != digistring_ui_icon(0x85, 3 << 8));
-    assert(!digistring_ui_icon(0x8b, 100 << 8));
-    assert(!digistring_ui_icon(0x84, 0x4000));
+    /* A TUNE stock, D SAMP hidden, the rest STRING's own. */
+    assert(!page->knob[0].name && !page->knob[0].flags);
+    assert(page->knob[3].flags == CM_HIDDEN);
+    check_knob(1, "EXC", 3, 3);
+    assert(page->knob[1].flags & CM_DRAW && page->knob[1].u.draw);
+    check_knob(2, "STIFF", 127, 0);
+    check_knob(4, "POS", 64, 0);
+    check_knob(5, "SOFT", 127, 0);
+    check_knob(6, "TONE", 4, 0);
+    check_knob(7, "DECAY", 127, 100);
+    assert(!strcmp(page->knob[7].lname, "Decay"));
 
-    /* LFO destinations index descriptors by param * 52. */
-    assert(!strcmp(digistring_ui_lfo_name(0x8b * 52, 0), "DECAY"));
-    assert(!strcmp(digistring_ui_lfo_name(0x85 * 52, 1), "Exciter"));
-    assert(!digistring_ui_lfo_name(0x84 * 52, 0));   /* TUNE keeps its name */
-    assert(!digistring_ui_lfo_name(-52, 0));
-    assert(!strcmp(digistring_ui_lfo_group(0x84), "STRG")); /* but STRG group */
-    assert(!strcmp(digistring_ui_lfo_group_at(0x87 * 52), "STRG"));
-    assert(!digistring_ui_lfo_group(0x8c));
-    assert(!digistring_ui_lfo_group(0x10));
+    /* Value texts. */
+    assert(digistring_fmt_exc(out, V(3), 0, 8) && !strcmp(out, "PLUCK"));
+    assert(digistring_fmt_exc(out, 0, 1, 8) && !strcmp(out, "BOW"));
+    assert(digistring_fmt_pos(out, 0, 0, 8) && !strcmp(out, "OFF"));
+    assert(digistring_fmt_pos(out, V(64), 0, 8) && !strcmp(out, "64"));
+    assert(digistring_fmt_number(out, V(127), 0, 8) && !strcmp(out, "127"));
+    assert(digistring_fmt_number(out, V(100), 1, 8) && !strcmp(out, "100"));
+    assert(digistring_fmt_number(out, V(7), 0, 8) && !strcmp(out, "7"));
+    assert(digistring_fmt_number(out, 0, 0, 8) && !strcmp(out, "0"));
 
-    digistring_page_m = 2; /* a stock machine's page */
-    assert(!digistring_ui_lfo_group(0x84));
-    assert(!digistring_ui_lfo_name(0x8b * 52, 0));
-    assert(!digistring_ui_icon(0x85, 0));
-    assert(!digistring_ui_label(0x8b, 0));
+    /* Small ranges span the 0..127 knob graphic. */
+    assert(page->knob[4].u.gfx == digistring_gfx_pos);
+    assert(page->knob[6].u.gfx == digistring_gfx_tone);
+    assert(!page->knob[7].u.gfx);
+    assert(digistring_gfx_pos(V(64)) == V(127));
+    assert(digistring_gfx_pos(V(32)) == V(64));
+    assert(digistring_gfx_tone(V(2)) == V(64));
+    assert(digistring_gfx_tone(V(4)) == V(127));
+    assert(digistring_gfx_tone(0) == 0);
+
     puts("ui: all tests passed");
     return 0;
 }

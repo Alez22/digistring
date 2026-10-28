@@ -8,7 +8,7 @@ out:
 	mkdir -p out
 out/test_karplus: karplus.c karplus.h ks_tables.inc ks_loop.inc tests/test_karplus.c | out
 	$(CC) $(CFLAGS) -I. karplus.c tests/test_karplus.c -lm -o $@
-out/test_ui: ui.c ks_icons.inc tests/test_ui.c | out
+out/test_ui: ui.c cm_ui.h ks_icons.inc tests/test_ui.c | out
 	$(CC) $(CFLAGS) -I. ui.c tests/test_ui.c -o $@
 out/test_karplus_fast: karplus.c karplus.h ks_tables.inc ks_loop.inc tests/test_karplus.c | out
 	$(CC) $(CFLAGS) -DKS_FAST -I. karplus.c tests/test_karplus.c -lm -o $@
@@ -18,11 +18,10 @@ test: out/test_karplus out/test_karplus_fast out/test_ui
 	./out/test_ui
 cross-check: | out
 	mkdir -p out/cross
-	$(CROSS)as -mcpu=54455 -o out/cross/glue.o glue.s
 	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c digitakt.c -o out/cross/digitakt.o
 	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c karplus.c -o out/cross/karplus.o
 	$(CROSS)gcc $(CROSS_CFLAGS) -DKS_FAST -I. -c karplus.c -o out/cross/karplus_fast.o
 	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c ui.c -o out/cross/ui.o
-	$(CROSS)size out/cross/glue.o out/cross/digitakt.o out/cross/karplus.o out/cross/ui.o
+	$(CROSS)size out/cross/digitakt.o out/cross/karplus.o out/cross/ui.o
 clean:
 	rm -rf out
