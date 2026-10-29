@@ -15,9 +15,15 @@ From 0.9.0 STRING is built on **machine-pages**, the shared framework
 that draws the SRC and LFO pages of added machines and gives them a place
 in the render. STRING patches no firmware bytes itself, so it combines
 with the other machines built on machine-pages, such as RAM Machines.
-machine-pages, and so STRING 0.9.0, cannot be installed with digichain,
-which owns the same places; digimono and digipoly need digichain. Use
-STRING 0.8.0 if you need those.
+
+**Conflicts:** machine-pages patches the same firmware bytes as the mods
+below, so STRING 0.9.0 cannot be installed with any of them:
+
+- SOPHIE (digisophie), digineighbor and digislicer;
+- digichain, and so digimono and digipoly, which need it.
+
+STRING 0.8.0 patches its own sites and works with all of them. Use it if
+you need one of those mods.
 
 ---
 
@@ -154,8 +160,8 @@ For OS 1.54, build from the 1.54 stock file: the SDK picks each
 `mod.json`'s 1.54 port and writes `-os1.54` files, such as
 `digistring-0.9.0-os1.54.elemod`; use those together.
 
-Add `--mod` lines (and the same files as `--with` to `lint`) for Sophie,
-digihealth or any other mod to build them into the same firmware; lint
+Add `--mod` lines (and the same files as `--with` to `lint`) for
+digihealth or any other compatible mod to build them into the same firmware; lint
 exits 0 only when the whole set links. STRING-fast is built from
 `variants/fast`, whose `mod.json` compiles the same sources with
 `-DKS_FAST`; it needs digihealth in the firmware.
